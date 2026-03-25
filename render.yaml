@@ -1,18 +1,9 @@
 services:
-  # Service PostgreSQL
-  - type: postgresql
-    name: dma-keynotes-db
-    plan: free
-    ipAllowList: []
-    databaseName: DMAKeynotesManager
-    postgresMajorVersion: 15
-
   # Service Backend Python
   - type: web
     name: dma-keynotes-backend
     env: python
     plan: free
-    rootDir: .
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -28,3 +19,11 @@ services:
         value: DMAKeynotesManager
       - key: PREFIX_API
         value: /api/v1
+
+  # Service PostgreSQL
+  - type: postgresql
+    name: dma-keynotes-db
+    plan: free
+    ipAllowList: []
+    databaseName: DMAKeynotesManager
+    postgresMajorVersion: 15
