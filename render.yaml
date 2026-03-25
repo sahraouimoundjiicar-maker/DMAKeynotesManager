@@ -21,7 +21,7 @@ services:
         value: /api/v1
 
   # Service PostgreSQL
-  - type: postgresql
+  - type: postgres
     name: dma-keynotes-db
     plan: free
     ipAllowList: []
