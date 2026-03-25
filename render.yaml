@@ -17,6 +17,8 @@ services:
         value: dmadb_nx1k
       - key: PREFIX_API
         value: /api/v1
+    runtime:
+      pythonVersion: "3.12"
 
   # Service PostgreSQL
   - type: postgres
