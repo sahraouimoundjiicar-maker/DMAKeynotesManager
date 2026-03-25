@@ -1,29 +1,30 @@
 services:
-  # Service Backend Python
-  - type: web
-    name: dma-keynotes-backend
-    env: python
-    plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: DATABASE_URL
-        value: postgresql://dmadb_nx1k_user:HrqZPI7M08W8M390a5RuEStHUFKS0NAy@dpg-d71j8qtm5p6s739r3gp0-a/dmadb_nx1k
-      - key: RENDER
-        value: true
-      - key: SECRET_KEY
-        generateValue: true
-      - key: NOM_BD
-        value: dmadb_nx1k
-      - key: PREFIX_API
-        value: /api/v1
-    runtime:
-      pythonVersion: "3.12"
-
   # Service PostgreSQL
-  - type: postgres
+  - type: postgresql
     name: dma-keynotes-db
     plan: free
     ipAllowList: []
     databaseName: DMAKeynotesManager
     postgresMajorVersion: 15
+
+  # Service Backend Python
+  - type: web
+    name: dma-keynotes-backend
+    env: python
+    plan: free
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dma-keynotes-db
+          property: connectionString
+      - key: RENDER
+        value: true
+      - key: SECRET_KEY
+        generateValue: true
+      - key: NOM_BD
+        value: DMAKeynotesManager
+      - key: PREFIX_API
+        value: /api/v1
