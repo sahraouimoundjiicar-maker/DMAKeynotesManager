@@ -4,9 +4,9 @@ services/acces.py
 Logique métier — Accès projets.
 
 Rôle :
-    - Attribuer l'accès d'un collaborateur à un projet
-    - Retirer l'accès d'un collaborateur à un projet
-    - Vérifier si un collaborateur a accès à un projet
+    - Attribuer l'accès d'un utilisateur à un projet
+    - Retirer l'accès d'un utilisateur à un projet
+    - Vérifier si un utilisateur a accès à un projet
 
 Importation :
     from app.services.acces import (
@@ -37,12 +37,12 @@ def attribuer_acces(
     id_super_admin: int,
 ) -> dict:
     """
-    Donne l'accès à un collaborateur pour un projet.
+    Donne l'accès à un utilisateur pour un projet.
     Réservé au super_admin uniquement.
 
     Args:
         id_projet     : ID du projet
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
         id_super_admin: ID du super_admin qui attribue
 
     Returns:
@@ -78,7 +78,7 @@ def attribuer_acces(
 
         # Étape 1.3 — Vérifier que le compte est approuvé
         """
-        Un collaborateur non approuvé ne peut pas
+        Un utilisateur non approuvé ne peut pas
         recevoir d'accès à un projet.
         """
         if utilisateur["statut"] != "approuve":
@@ -125,12 +125,12 @@ def retirer_acces(
     id_utilisateur: int,
 ) -> bool:
     """
-    Retire l'accès d'un collaborateur à un projet.
+    Retire l'accès d'un utilisateur à un projet.
     Réservé au super_admin uniquement.
 
     Args:
         id_projet     : ID du projet
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         True si le retrait a réussi
@@ -176,13 +176,13 @@ def verifier_acces_projet(
     id_utilisateur: int,
 ) -> bool:
     """
-    Vérifie si un collaborateur a accès à un projet.
+    Vérifie si un utilisateur a accès à un projet.
     Utilisée par la dépendance FastAPI verifier_acces_projet
     pour protéger les routes keynotes.
 
     Args:
         id_projet     : ID du projet
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         True si l'utilisateur a accès, False sinon

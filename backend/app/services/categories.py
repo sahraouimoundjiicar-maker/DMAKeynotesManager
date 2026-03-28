@@ -145,7 +145,7 @@ def modifier_categorie(
     """
     Modifie une catégorie avec verrouillage optimiste.
     Détecte les modifications simultanées entre
-    collaborateurs et retourne une erreur claire.
+    utilisateurs et retourne une erreur claire.
 
     Args:
         id_projet        : ID du projet

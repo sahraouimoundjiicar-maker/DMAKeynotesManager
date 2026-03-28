@@ -148,7 +148,7 @@ def creer_tables_utilisateurs(
 
     Tables créées :
         - super_admin         (compte unique du BIM Manager)
-        - utilisateurs        (collaborateurs)
+        - utilisateurs        (utilisateurs)
         - reinitialisation_mdp (demandes de reset mdp)
 
     Args:
@@ -187,7 +187,7 @@ def creer_tables_utilisateurs(
 
     # Étape 3.2 — Table utilisateurs
     """
-    Contient tous les collaborateurs de l'application.
+    Contient tous les utilisateurs de l'application.
     statut gère le flux d'approbation :
         'en_attente' → nouveau compte en attente
         'approuve'   → accès autorisé
@@ -218,11 +218,11 @@ def creer_tables_utilisateurs(
                     (
                         20
                     ) NOT NULL
-                        DEFAULT 'editeur'
+                        DEFAULT 'utilisateur'
                         CHECK
                     (
                         role =
-                        'editeur'
+                        'utilisateur'
                     ),
                         statut VARCHAR
                     (
@@ -300,7 +300,7 @@ def creer_tables_projets(
 
     Tables créées :
         - projets       (projets Revit)
-        - acces_projet  (accès des collaborateurs)
+        - acces_projet  (accès des utilisateurs)
 
     Args:
         curseur: Curseur PostgreSQL actif
@@ -340,8 +340,8 @@ def creer_tables_projets(
 
     # Étape 4.2 — Table acces_projet
     """
-    Gère les accès des collaborateurs aux projets.
-    Un collaborateur peut avoir accès à plusieurs projets.
+    Gère les accès des utilisateurs aux projets.
+    Un utilisateur peut avoir accès à plusieurs projets.
     UNIQUE(id_projet, id_utilisateur) évite les doublons.
     """
     curseur.execute("""
@@ -407,7 +407,7 @@ def creer_tables_keynotes(
     par projet mais peut se répéter dans d'autres projets.
     version : champ pour le verrouillage optimiste —
     incrémenté à chaque modification pour détecter
-    les conflits entre collaborateurs.
+    les conflits entre utilisateurs.
     """
     curseur.execute("""
                     CREATE TABLE IF NOT EXISTS categories
@@ -541,9 +541,9 @@ def creer_table_historique(
     """
     Enregistre toutes les actions sur les keynotes.
     Super admin voit tout l'historique du projet.
-    Collaborateur voit uniquement ses propres actions.
+    utilisateur voit uniquement ses propres actions.
     effectue_par_role permet de distinguer super_admin
-    des éditeurs sans FK inter-tables complexe.
+    des utilisateurs sans FK inter-tables complexe.
     """
     curseur.execute("""
                     CREATE TABLE IF NOT EXISTS historique
@@ -606,7 +606,7 @@ def creer_table_historique(
                         IN
                     (
                         'super_admin',
-                        'editeur'
+                        'utilisateur'
                     )),
                         date_action TIMESTAMP
                         DEFAULT CURRENT_TIMESTAMP
@@ -646,7 +646,7 @@ def creer_index(
 
     # Étape 7.2 — Index sur la table acces_projet
     """
-    Utilisé pour vérifier rapidement si un collaborateur
+    Utilisé pour vérifier rapidement si un utilisateur
     a accès à un projet donné.
     """
     curseur.execute("""
@@ -697,7 +697,7 @@ def creer_index(
     """
     date_action est utilisé pour le tri et la pagination.
     effectue_par_id est utilisé pour filtrer les actions
-    d'un collaborateur spécifique.
+    d'un utilisateur spécifique.
     """
     curseur.execute("""
                     CREATE INDEX IF NOT EXISTS idx_historique_projet

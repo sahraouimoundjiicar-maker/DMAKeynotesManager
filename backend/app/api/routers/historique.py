@@ -6,7 +6,7 @@ Routes de l'historique — /api/v1/projets/...
 Routes définies :
     GET /api/v1/projets/{id}/historique
         → Super admin : tout l'historique du projet
-        → Collaborateur : uniquement ses propres actions
+        → utilisateur : uniquement ses propres actions
         Pagination via ?page=1&limite=50
 
 Importation dans main.py :
@@ -20,7 +20,7 @@ import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.dependencies import verifier_editeur
+from app.api.dependencies import verifier_utilisateur
 from app.database.connection import creer_connexion
 from app.logger import get_logger
 from app.models.schemas.historique import (
@@ -59,14 +59,14 @@ def lister_historique(
         le          = 100,
         description = "Nombre d'entrées par page (max 100)",
     ),
-    utilisateur: dict = Depends(verifier_editeur),
+    utilisateur: dict = Depends(verifier_utilisateur),
 ) -> dict:
     """
     Retourne l'historique paginé d'un projet.
 
     Comportement selon le rôle :
         - super_admin : tout l'historique du projet
-        - éditeur     : uniquement ses propres actions
+        - utilisateur     : uniquement ses propres actions
 
     Paramètres de pagination :
         - page  : numéro de page (défaut : 1)
@@ -85,7 +85,7 @@ def lister_historique(
         # Étape 1.2 — Récupérer selon le rôle
         """
         Le super_admin voit tout l'historique du projet.
-        Un collaborateur ne voit que ses propres actions.
+        Un utilisateur ne voit que ses propres actions.
         """
         role = utilisateur.get("role")
         id_utilisateur = utilisateur.get("id")
@@ -99,7 +99,7 @@ def lister_historique(
                 connexion, id_projet, limite, offset
             )
         else:
-            # Étape 1.4 — Historique filtré (collaborateur)
+            # Étape 1.4 — Historique filtré (utilisateur)
             total = (
                 repo_historique
                 .compter_historique_utilisateur(

@@ -162,7 +162,7 @@ def modifier_note(
 ) -> dict:
     """
     Modifie une note avec verrouillage optimiste.
-    Si deux collaborateurs modifient la même note
+    Si deux utilisateurs modifient la même note
     simultanément, le second reçoit un message d'erreur
     clair lui demandant de recharger.
 

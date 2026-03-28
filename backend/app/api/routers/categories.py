@@ -5,16 +5,16 @@ Routes de gestion des catégories — /api/v1/projets/...
 
 Routes définies :
     POST   /api/v1/projets/{id}/categories
-        → Créer une catégorie (éditeur + super_admin)
+        → Créer une catégorie (utilisateur + super_admin)
 
     GET    /api/v1/projets/{id}/categories
-        → Lister les catégories (éditeur + super_admin)
+        → Lister les catégories (utilisateur + super_admin)
 
     PUT    /api/v1/projets/{id}/categories/{id_cat}
-        → Modifier une catégorie (éditeur + super_admin)
+        → Modifier une catégorie (utilisateur + super_admin)
 
     DELETE /api/v1/projets/{id}/categories/{id_cat}
-        → Supprimer une catégorie vide (éditeur + super_admin)
+        → Supprimer une catégorie vide (utilisateur + super_admin)
 
 Importation dans main.py :
     from app.api.routers import categories
@@ -27,7 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.dependencies import (
     obtenir_verificateur_acces,
-    verifier_editeur,
+    verifier_utilisateur,
 )
 from app.logger import get_logger
 from app.models.schemas.categories import (
@@ -61,13 +61,13 @@ router = APIRouter(prefix="/projets", tags=["Catégories"])
 def creer_categorie(
     id_projet  : int,
     donnees    : CreerCategorieModele,
-    utilisateur: dict = Depends(verifier_editeur),
+    utilisateur: dict = Depends(verifier_utilisateur),
 ) -> dict:
     """
     Crée une nouvelle catégorie dans un projet.
     Le numéro doit être unique dans tout le projet
     (catégories ET notes).
-    Accessible aux éditeurs et au super_admin.
+    Accessible aux utilisateurs et au super_admin.
     """
     # Étape 1.1 — Créer la catégorie
     try:
@@ -96,7 +96,7 @@ def creer_categorie(
 )
 def lister_categories(
     id_projet  : int,
-    utilisateur: dict = Depends(verifier_editeur),
+    utilisateur: dict = Depends(verifier_utilisateur),
 ) -> list:
     """
     Retourne toutes les catégories d'un projet avec
@@ -121,7 +121,7 @@ def modifier_categorie(
     id_projet   : int,
     id_categorie: int,
     donnees     : ModifierCategorieModele,
-    utilisateur : dict = Depends(verifier_editeur),
+    utilisateur : dict = Depends(verifier_utilisateur),
 ) -> dict:
     """
     Modifie une catégorie avec verrouillage optimiste.
@@ -159,7 +159,7 @@ def modifier_categorie(
 def supprimer_categorie(
     id_projet   : int,
     id_categorie: int,
-    utilisateur : dict = Depends(verifier_editeur),
+    utilisateur : dict = Depends(verifier_utilisateur),
 ) -> dict:
     """
     Supprime une catégorie uniquement si elle est vide.

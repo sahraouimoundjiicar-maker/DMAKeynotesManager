@@ -194,23 +194,23 @@ def inserer_utilisateur(
     mot_de_passe_hash: str,
 ) -> dict:
     """
-    Insère un nouveau collaborateur dans la BD.
+    Insère un nouveau utilisateur dans la BD.
     Le statut est 'en_attente' par défaut.
 
     Args:
         connexion        : Connexion PostgreSQL active
-        nom              : Nom du collaborateur
-        prenom           : Prénom du collaborateur
+        nom              : Nom du utilisateur
+        prenom           : Prénom du utilisateur
         email            : Email unique en minuscules
         mot_de_passe_hash: Mot de passe haché avec bcrypt
 
     Returns:
-        Dictionnaire avec les infos du collaborateur créé
+        Dictionnaire avec les infos du utilisateur créé
     """
     curseur = connexion.cursor()
 
     try:
-        # Étape 2.1 — Insérer le collaborateur
+        # Étape 2.1 — Insérer le utilisateur
         curseur.execute("""
             INSERT INTO utilisateurs (
                 nom,
@@ -266,7 +266,7 @@ def obtenir_utilisateur_par_email(
 
     Args:
         connexion: Connexion PostgreSQL active
-        email    : Email du collaborateur
+        email    : Email du utilisateur
 
     Returns:
         Dictionnaire avec les infos ou None si absent
@@ -324,7 +324,7 @@ def obtenir_utilisateur_par_id(
 
     Args:
         connexion     : Connexion PostgreSQL active
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         Dictionnaire avec les infos ou None si absent
@@ -374,7 +374,7 @@ def lister_utilisateurs(
     connexion: psycopg2.extensions.connection,
 ) -> list[dict]:
     """
-    Récupère la liste de tous les collaborateurs.
+    Récupère la liste de tous les utilisateurs.
     Les mots de passe ne sont jamais inclus.
 
     Args:
@@ -426,14 +426,14 @@ def lister_utilisateurs_en_attente(
     connexion: psycopg2.extensions.connection,
 ) -> list[dict]:
     """
-    Récupère les collaborateurs en attente d'approbation.
+    Récupère les utilisateurs en attente d'approbation.
     Utilisée par le super_admin pour gérer les demandes.
 
     Args:
         connexion: Connexion PostgreSQL active
 
     Returns:
-        Liste des collaborateurs avec statut 'en_attente'
+        Liste des utilisateurs avec statut 'en_attente'
     """
     curseur = connexion.cursor()
 
@@ -481,12 +481,12 @@ def mettre_a_jour_statut_utilisateur(
     nouveau_statut: str,
 ) -> bool:
     """
-    Met à jour le statut d'un collaborateur.
+    Met à jour le statut d'un utilisateur.
     Utilisée pour approuver ou refuser un compte.
 
     Args:
         connexion     : Connexion PostgreSQL active
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
         nouveau_statut: 'approuve' ou 'refuse'
 
     Returns:
@@ -530,7 +530,7 @@ def mettre_a_jour_utilisateur(
 
     Args:
         connexion     : Connexion PostgreSQL active
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
         champs        : Dict avec les champs à modifier
 
     Returns:
@@ -598,7 +598,7 @@ def supprimer_utilisateur(
 
     Args:
         connexion     : Connexion PostgreSQL active
-        id_utilisateur: ID du collaborateur à supprimer
+        id_utilisateur: ID du utilisateur à supprimer
 
     Returns:
         True si la suppression a réussi
@@ -644,7 +644,7 @@ def inserer_demande_reinitialisation(
 
     Args:
         connexion       : Connexion PostgreSQL active
-        id_utilisateur  : ID du collaborateur
+        id_utilisateur  : ID du utilisateur
         nouveau_mdp_hash: Nouveau mot de passe haché
 
     Returns:
@@ -768,7 +768,7 @@ def approuver_reinitialisation(
 
     Args:
         connexion     : Connexion PostgreSQL active
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         True si l'approbation a réussi
@@ -832,7 +832,7 @@ def refuser_reinitialisation(
 
     Args:
         connexion     : Connexion PostgreSQL active
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         True si le refus a réussi

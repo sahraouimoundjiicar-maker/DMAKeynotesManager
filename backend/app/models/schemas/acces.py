@@ -5,7 +5,7 @@ Modèles Pydantic — Accès projets.
 
 Rôle :
     Définir et valider les données entrantes et sortantes
-    pour la gestion des accès des collaborateurs aux projets.
+    pour la gestion des accès des utilisateurs aux projets.
 
 Schemas définis :
     - AttribuerAccesModele   attribuer l'accès à un projet
@@ -32,7 +32,7 @@ class AttribuerAccesModele(BaseModel):
     Route : POST /api/v1/projets/{id}/acces
 
     Réservé au super_admin uniquement.
-    id_utilisateur référence un collaborateur approuvé
+    id_utilisateur référence un utilisateur approuvé
     dans la table utilisateurs.
     """
 

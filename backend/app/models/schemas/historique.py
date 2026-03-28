@@ -41,7 +41,7 @@ class HistoriqueReponseModele(BaseModel):
     Réponse représentant une entrée dans l'historique.
 
     effectue_par_role permet de distinguer visuellement
-    les actions du super_admin de celles des éditeurs
+    les actions du super_admin de celles des utilisateurs
     dans l'interface frontend.
 
     ancienne_valeur et nouvelle_valeur sont optionnels

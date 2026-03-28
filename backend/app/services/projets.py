@@ -6,7 +6,7 @@ Logique métier — Projets.
 Rôle :
     - Créer, afficher, modifier et supprimer les projets
     - Gérer le fichier .txt associé à chaque projet
-    - Lister les projets et leurs collaborateurs
+    - Lister les projets et leurs utilisateurs
 
 Importation :
     from app.services.projets import (
@@ -91,13 +91,13 @@ def creer_projet(
 def afficher_projet(id_projet: int) -> dict:
     """
     Retourne les détails d'un projet avec la liste
-    complète des collaborateurs ayant accès.
+    complète des utilisateurs ayant accès.
 
     Args:
         id_projet: ID du projet
 
     Returns:
-        Dictionnaire avec infos projet + collaborateurs
+        Dictionnaire avec infos projet + utilisateurs
 
     Raises:
         ValueError: Si le projet n'existe pas
@@ -114,14 +114,14 @@ def afficher_projet(id_projet: int) -> dict:
                 f"Projet {id_projet} introuvable."
             )
 
-        # Étape 2.2 — Récupérer les collaborateurs
-        collaborateurs = (
-            repo_acces.lister_collaborateurs_du_projet(
+        # Étape 2.2 — Récupérer les utilisateurs
+        utilisateurs = (
+            repo_acces.lister_utilisateurs_du_projet(
                 connexion, id_projet
             )
         )
 
-        projet["collaborateurs"] = collaborateurs
+        projet["utilisateurs"] = utilisateurs
         return projet
 
     except ValueError:
@@ -162,10 +162,10 @@ def lister_projets_utilisateur(
     id_utilisateur: int,
 ) -> list[dict]:
     """
-    Retourne les projets accessibles par un collaborateur.
+    Retourne les projets accessibles par un utilisateur.
 
     Args:
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         Liste des projets accessibles par l'utilisateur
@@ -173,7 +173,7 @@ def lister_projets_utilisateur(
     connexion = creer_connexion()
 
     try:
-        # Étape 2.4 — Récupérer les projets du collaborateur
+        # Étape 2.4 — Récupérer les projets du utilisateur
         return repo_projets.lister_projets_par_utilisateur(
             connexion, id_utilisateur
         )

@@ -191,11 +191,11 @@ def lister_projets_par_utilisateur(
 ) -> list[dict]:
     """
     Récupère les projets accessibles par un utilisateur.
-    Utilisée pour afficher les projets d'un collaborateur.
+    Utilisée pour afficher les projets d'un utilisateur.
 
     Args:
         connexion     : Connexion PostgreSQL active
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         Liste des projets accessibles par l'utilisateur

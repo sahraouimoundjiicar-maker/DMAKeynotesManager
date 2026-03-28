@@ -43,7 +43,7 @@ def verifier_acces_existant(
     Args:
         connexion     : Connexion PostgreSQL active
         id_projet     : ID du projet
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         True si l'accès existe déjà, False sinon
@@ -70,12 +70,12 @@ def verifier_acces_existant(
         curseur.close()
 
 
-def lister_collaborateurs_du_projet(
+def lister_utilisateurs_du_projet(
     connexion: psycopg2.extensions.connection,
     id_projet: int,
 ) -> list[dict]:
     """
-    Récupère la liste des collaborateurs ayant accès
+    Récupère la liste des utilisateurs ayant accès
     à un projet avec leurs informations.
 
     Args:
@@ -83,7 +83,7 @@ def lister_collaborateurs_du_projet(
         id_projet: ID du projet
 
     Returns:
-        Liste des collaborateurs avec date d'attribution
+        Liste des utilisateurs avec date d'attribution
     """
     curseur = connexion.cursor()
 
@@ -91,7 +91,7 @@ def lister_collaborateurs_du_projet(
         # Étape 1.2 — Joindre acces_projet et utilisateurs
         """
         On joint avec utilisateurs pour récupérer
-        le nom et l'email de chaque collaborateur.
+        le nom et l'email de chaque utilisateur.
         """
         curseur.execute("""
             SELECT
@@ -124,7 +124,7 @@ def lister_collaborateurs_du_projet(
 
     except Exception as erreur:
         logger.error(
-            f"Erreur listage collaborateurs : {erreur}"
+            f"Erreur listage utilisateurs : {erreur}"
         )
         raise
     finally:
@@ -144,7 +144,7 @@ def verifier_acces_utilisateur(
     Args:
         connexion     : Connexion PostgreSQL active
         id_projet     : ID du projet
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         True si l'utilisateur a accès, False sinon
@@ -183,12 +183,12 @@ def inserer_acces(
     id_super_admin: int,
 ) -> dict:
     """
-    Attribue l'accès d'un collaborateur à un projet.
+    Attribue l'accès d'un utilisateur à un projet.
 
     Args:
         connexion     : Connexion PostgreSQL active
         id_projet     : ID du projet
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
         id_super_admin: ID du super_admin qui attribue
 
     Returns:
@@ -245,12 +245,12 @@ def supprimer_acces(
     id_utilisateur: int,
 ) -> bool:
     """
-    Retire l'accès d'un collaborateur à un projet.
+    Retire l'accès d'un utilisateur à un projet.
 
     Args:
         connexion     : Connexion PostgreSQL active
         id_projet     : ID du projet
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         True si la suppression a réussi

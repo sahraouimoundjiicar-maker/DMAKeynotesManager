@@ -5,10 +5,10 @@ Routes d'authentification — /api/v1/auth/...
 
 Routes définies :
     POST /api/v1/auth/register
-        → Inscription publique d'un collaborateur
+        → Inscription publique d'un utilisateur
 
     POST /api/v1/auth/login
-        → Connexion unifiée (super_admin et collaborateurs)
+        → Connexion unifiée (super_admin et utilisateurs)
 
     PUT  /api/v1/auth/reinitialiser-mot-de-passe
         → Demande de réinitialisation de mot de passe
@@ -25,7 +25,7 @@ from pydantic import BaseModel, EmailStr
 from app.logger import get_logger
 from app.models.schemas.auth import (
     LoginAdminModele,
-    LoginCollaborateurModele,
+    LoginutilisateurModele,
     RegisterModele,
     ReinitialisationMdpModele,
     TokenModele,
@@ -64,22 +64,22 @@ class LoginUnifieModele(BaseModel):
     "/register",
     response_model=UtilisateurReponseModele,
     status_code=status.HTTP_201_CREATED,
-    summary="Inscription d'un collaborateur",
+    summary="Inscription d'un utilisateur",
 )
-def inscrire_collaborateur(
+def inscrire_utilisateur(
         donnees: RegisterModele,
 ) -> dict:
     """
-    Inscrit un nouveau collaborateur avec le statut
+    Inscrit un nouveau utilisateur avec le statut
     'en_attente'. Le super_admin doit approuver le compte
-    avant que le collaborateur puisse se connecter.
+    avant que le utilisateur puisse se connecter.
 
     Le compte ne peut pas se connecter tant qu'il
     n'est pas approuvé par le BIM Manager.
     """
     # Étape 1.1 — Appeler le service d'inscription
     try:
-        return service_auth.inscrire_collaborateur(
+        return service_auth.inscrire_utilisateur(
             nom=donnees.nom,
             prenom=donnees.prenom,
             email=donnees.email,
@@ -99,7 +99,7 @@ def inscrire_collaborateur(
 @router.post(
     "/login",
     response_model=TokenModele,
-    summary="Connexion unifiée (super_admin et collaborateurs)"
+    summary="Connexion unifiée (super_admin et utilisateurs)"
 )
 def connecter(
         donnees: LoginUnifieModele,
@@ -107,7 +107,7 @@ def connecter(
     """
     Endpoint unique de connexion.
     Détecte automatiquement si c'est un super_admin
-    ou un collaborateur et utilise le service approprié.
+    ou un utilisateur et utilise le service approprié.
     """
     # Étape 2.1 — Normaliser l'email
     email_normalise = donnees.email.lower().strip()
@@ -119,9 +119,9 @@ def connecter(
             mot_de_passe=donnees.mot_de_passe
         )
     except ValueError:
-        # Étape 2.3 — Si ce n'est pas admin, essayer collaborateur
+        # Étape 2.3 — Si ce n'est pas admin, essayer utilisateur
         try:
-            return service_auth.connecter_collaborateur(
+            return service_auth.connecter_utilisateur(
                 email=email_normalise,
                 mot_de_passe=donnees.mot_de_passe
             )

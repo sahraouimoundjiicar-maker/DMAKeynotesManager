@@ -5,16 +5,16 @@ Routes de gestion des notes — /api/v1/projets/...
 
 Routes définies :
     POST   /api/v1/projets/{id}/categories/{id_cat}/notes
-        → Créer une note (éditeur + super_admin)
+        → Créer une note (utilisateur + super_admin)
 
     GET    /api/v1/projets/{id}/categories/{id_cat}/notes
-        → Lister les notes d'une catégorie (éditeur)
+        → Lister les notes d'une catégorie (utilisateur)
 
     PUT    /api/v1/projets/{id}/notes/{id_note}
-        → Modifier une note (éditeur + super_admin)
+        → Modifier une note (utilisateur + super_admin)
 
     DELETE /api/v1/projets/{id}/notes/{id_note}
-        → Supprimer une note (éditeur + super_admin)
+        → Supprimer une note (utilisateur + super_admin)
 
 Importation dans main.py :
     from app.api.routers import notes
@@ -23,7 +23,7 @@ Importation dans main.py :
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.dependencies import verifier_editeur
+from app.api.dependencies import verifier_utilisateur
 from app.logger import get_logger
 from app.models.schemas.notes import (
     CreerNoteModele,
@@ -57,13 +57,13 @@ def creer_note(
     id_projet   : int,
     id_categorie: int,
     donnees     : CreerNoteModele,
-    utilisateur : dict = Depends(verifier_editeur),
+    utilisateur : dict = Depends(verifier_utilisateur),
 ) -> dict:
     """
     Crée une nouvelle note obligatoirement liée à une
     catégorie existante. Le numéro doit être unique dans
     tout le projet (notes ET catégories).
-    Accessible aux éditeurs et au super_admin.
+    Accessible aux utilisateurs et au super_admin.
     """
     # Étape 1.1 — Créer la note dans la catégorie
     try:
@@ -94,12 +94,12 @@ def creer_note(
 def lister_notes(
     id_projet   : int,
     id_categorie: int,
-    utilisateur : dict = Depends(verifier_editeur),
+    utilisateur : dict = Depends(verifier_utilisateur),
 ) -> list:
     """
     Retourne toutes les notes d'une catégorie spécifique.
     Triées par numéro en ordre numérique naturel.
-    Accessible aux éditeurs et au super_admin.
+    Accessible aux utilisateurs et au super_admin.
     """
     # Étape 2.1 — Lister les notes de la catégorie
     return service_notes.lister_notes_categorie(
@@ -120,14 +120,14 @@ def modifier_note(
     id_projet  : int,
     id_note    : int,
     donnees    : ModifierNoteModele,
-    utilisateur: dict = Depends(verifier_editeur),
+    utilisateur: dict = Depends(verifier_utilisateur),
 ) -> dict:
     """
     Modifie une note avec verrouillage optimiste.
     Si un autre utilisateur a modifié la note depuis
     l'ouverture, une erreur 409 est retournée avec
     un message demandant de recharger et réessayer.
-    Accessible aux éditeurs et au super_admin.
+    Accessible aux utilisateurs et au super_admin.
     """
     # Étape 3.1 — Modifier la note
     try:
@@ -159,12 +159,12 @@ def modifier_note(
 def supprimer_note(
     id_projet  : int,
     id_note    : int,
-    utilisateur: dict = Depends(verifier_editeur),
+    utilisateur: dict = Depends(verifier_utilisateur),
 ) -> dict:
     """
     Supprime une note spécifique sans affecter les
     autres notes de la catégorie.
-    Accessible aux éditeurs et au super_admin.
+    Accessible aux utilisateurs et au super_admin.
     """
     # Étape 4.1 — Supprimer la note
     try:

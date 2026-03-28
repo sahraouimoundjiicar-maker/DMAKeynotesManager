@@ -12,8 +12,8 @@ Schemas définis :
     - ModifierProjetModele      renommer un projet
     - ImporterProjetModele      importer un fichier .txt
     - ProjetReponseModele       réponse simple
-    - CollaborateurProjetModele collaborateur dans un projet
-    - ProjetDetailModele        réponse avec collaborateurs
+    - utilisateurProjetModele utilisateur dans un projet
+    - ProjetDetailModele        réponse avec utilisateurs
 
 Importation :
     from app.models.schemas.projets import (
@@ -164,13 +164,13 @@ class ProjetReponseModele(BaseModel):
         from_attributes = True
 
 
-class CollaborateurProjetModele(BaseModel):
+class utilisateurProjetModele(BaseModel):
     """
-    Informations d'un collaborateur ayant accès au projet.
+    Informations d'un utilisateur ayant accès au projet.
     Utilisé dans ProjetDetailModele.
     """
 
-    # Étape 2.2 — Champs du collaborateur
+    # Étape 2.2 — Champs du utilisateur
     id_utilisateur   : int
     nom              : str
     prenom           : str
@@ -181,7 +181,7 @@ class CollaborateurProjetModele(BaseModel):
 class ProjetDetailModele(BaseModel):
     """
     Réponse détaillée avec les infos complètes d'un projet
-    incluant la liste des collaborateurs ayant accès.
+    incluant la liste des utilisateurs ayant accès.
     Route : GET /api/v1/projets/{id}
     """
 
@@ -191,7 +191,7 @@ class ProjetDetailModele(BaseModel):
     txt_a_jour          : bool
     date_dernier_export : Optional[datetime] = None
     date_creation       : datetime
-    collaborateurs      : list[CollaborateurProjetModele] = []
+    utilisateurs      : list[utilisateurProjetModele] = []
 
     class Config:
         """Permet la conversion depuis les objets PostgreSQL."""

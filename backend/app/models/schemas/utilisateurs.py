@@ -8,7 +8,7 @@ Rôle :
     pour toutes les opérations sur les utilisateurs.
 
 Schemas définis :
-    - ModifierUtilisateurModele   modifier un collaborateur
+    - ModifierUtilisateurModele   modifier un utilisateur
     - UtilisateurReponseModele    réponse simple
     - UtilisateurDetailModele     réponse avec projets
 
@@ -32,7 +32,7 @@ from app.config import MOT_DE_PASSE_MIN_LONGUEUR, NOM_MIN_LONGUEUR
 
 class ModifierUtilisateurModele(BaseModel):
     """
-    Données pour modifier un collaborateur existant.
+    Données pour modifier un utilisateur existant.
     Route : PUT /api/v1/utilisateurs/{id}
 
     Tous les champs sont optionnels — seuls les champs
@@ -112,7 +112,7 @@ class ModifierUtilisateurModele(BaseModel):
 class UtilisateurReponseModele(BaseModel):
     """
     Réponse simple avec les infos de base d'un utilisateur.
-    Utilisée pour la liste des collaborateurs et les
+    Utilisée pour la liste des utilisateurs et les
     opérations CRUD simples.
     Les mots de passe ne sont jamais inclus dans les réponses.
     """

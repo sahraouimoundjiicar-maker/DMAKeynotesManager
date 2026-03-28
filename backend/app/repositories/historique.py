@@ -189,7 +189,7 @@ def lister_historique_utilisateur(
     """
     Récupère uniquement les actions d'un utilisateur
     dans l'historique d'un projet (paginé).
-    Accessible aux collaborateurs pour leurs propres actions.
+    Accessible aux utilisateurs pour leurs propres actions.
 
     Args:
         connexion     : Connexion PostgreSQL active
@@ -275,7 +275,7 @@ def inserer_historique(
         table_cible      : 'categories', 'notes' ou 'projet'
         action           : Type d'action effectuée
         effectue_par_id  : ID de l'auteur de l'action
-        effectue_par_role: 'super_admin' ou 'editeur'
+        effectue_par_role: 'super_admin' ou 'utilisateur'
         id_cible         : ID de l'élément modifié
         ancienne_valeur  : Valeur avant modification
         nouvelle_valeur  : Valeur après modification

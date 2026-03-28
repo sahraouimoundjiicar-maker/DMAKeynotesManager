@@ -10,7 +10,7 @@ Rôle :
 Dépendances disponibles :
     - obtenir_utilisateur_actuel()  tout utilisateur connecté
     - verifier_super_admin()        super_admin uniquement
-    - verifier_editeur()            éditeur ou super_admin
+    - verifier_utilisateur()            utilisateur ou super_admin
     - verifier_acces_projet()       accès au projet requis
 
 Utilisation dans les routeurs :
@@ -130,14 +130,14 @@ def verifier_super_admin(
     return utilisateur_actuel
 
 
-def verifier_editeur(
+def verifier_utilisateur(
     utilisateur_actuel: dict = Depends(
         obtenir_utilisateur_actuel
     ),
 ) -> dict:
     """
     Dépendance FastAPI — vérifie que l'utilisateur connecté
-    est un éditeur ou le super_admin.
+    est un utilisateur ou le super_admin.
     Sinon retourne une erreur 403.
 
     À utiliser sur les routes de gestion des keynotes :
@@ -153,11 +153,11 @@ def verifier_editeur(
     Raises:
         HTTPException 403: Si le rôle est invalide
     """
-    # Étape 2.2 — Vérifier le rôle éditeur ou super_admin
-    roles_autorises = ["editeur", "super_admin"]
+    # Étape 2.2 — Vérifier le rôle utilisateur ou super_admin
+    roles_autorises = ["utilisateur", "super_admin"]
     if utilisateur_actuel.get("role") not in roles_autorises:
         logger.warning(
-            f"Accès refusé (éditeur requis) : "
+            f"Accès refusé (utilisateur requis) : "
             f"{utilisateur_actuel.get('email')}"
         )
         raise HTTPException(
@@ -177,7 +177,7 @@ def obtenir_verificateur_acces(id_projet: int):
     qui vérifie l'accès d'un utilisateur à un projet.
 
     Le super_admin a toujours accès à tous les projets.
-    Un collaborateur doit avoir un accès explicite.
+    Un utilisateur doit avoir un accès explicite.
 
     Args:
         id_projet: ID du projet à vérifier
@@ -196,7 +196,7 @@ def obtenir_verificateur_acces(id_projet: int):
     """
     # Étape 3.1 — Créer la dépendance de vérification
     def _verifier_acces(
-        utilisateur_actuel: dict = Depends(verifier_editeur),
+        utilisateur_actuel: dict = Depends(verifier_utilisateur),
     ) -> dict:
         """
         Vérifie que l'utilisateur a accès au projet.
@@ -206,7 +206,7 @@ def obtenir_verificateur_acces(id_projet: int):
         if utilisateur_actuel.get("role") == "super_admin":
             return utilisateur_actuel
 
-        # Étape 3.3 — Vérifier l'accès du collaborateur
+        # Étape 3.3 — Vérifier l'accès du utilisateur
         id_utilisateur = utilisateur_actuel.get("id")
         a_acces = verifier_acces_projet(
             id_projet, id_utilisateur

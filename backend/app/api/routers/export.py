@@ -5,7 +5,7 @@ Route d'export du fichier .txt Revit — /api/v1/projets/...
 
 Routes définies :
     GET /api/v1/projets/{id}/exporter
-        → Exporter le fichier .txt Revit (éditeur + super_admin)
+        → Exporter le fichier .txt Revit (utilisateur + super_admin)
 
 Importation dans main.py :
     from app.api.routers import export
@@ -14,7 +14,7 @@ Importation dans main.py :
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.dependencies import verifier_editeur
+from app.api.dependencies import verifier_utilisateur
 from app.logger import get_logger
 from app.services import projets as service_projets
 from app.services import keynotes_fichier as service_fichier
@@ -38,7 +38,7 @@ router = APIRouter(prefix="/projets", tags=["Export"])
 )
 def exporter_fichier_txt(
     id_projet  : int,
-    utilisateur: dict = Depends(verifier_editeur),
+    utilisateur: dict = Depends(verifier_utilisateur),
 ) -> dict:
     """
     Génère le fichier .txt keynotes au format standard Revit
@@ -53,7 +53,7 @@ def exporter_fichier_txt(
         - Format : numéro[TAB]description[TAB]parent
         - txt_a_jour = True après l'export
 
-    Accessible à tous les collaborateurs ayant accès
+    Accessible à tous les utilisateurs ayant accès
     au projet et au super_admin.
     """
     # Étape 1.1 — Récupérer les infos du projet
@@ -70,7 +70,7 @@ def exporter_fichier_txt(
         )
 
     # Étape 1.2 — Déterminer le rôle pour l'historique
-    role = utilisateur.get("role", "editeur")
+    role = utilisateur.get("role", "utilisateur")
 
     # Étape 1.3 — Générer et sauvegarder le fichier .txt
     try:

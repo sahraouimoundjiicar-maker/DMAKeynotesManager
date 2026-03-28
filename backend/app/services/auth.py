@@ -6,8 +6,8 @@ Logique métier — Authentification.
 Rôle :
     - Hacher et vérifier les mots de passe (bcrypt)
     - Générer et décoder les tokens JWT
-    - Gérer l'inscription des collaborateurs
-    - Gérer la connexion admin et collaborateur
+    - Gérer l'inscription des utilisateurs
+    - Gérer la connexion admin et utilisateur
     - Gérer les demandes de réinitialisation mdp
 
 Importation :
@@ -15,9 +15,9 @@ Importation :
         hacher_mot_de_passe,
         verifier_mot_de_passe,
         generer_token_jwt,
-        inscrire_collaborateur,
+        inscrire_utilisateur,
         connecter_admin,
-        connecter_collaborateur,
+        connecter_utilisateur,
     )
 """
 
@@ -157,21 +157,21 @@ def decoder_token_jwt(token: str) -> dict:
 # ÉTAPE 3 — INSCRIPTION
 # ─────────────────────────────────────────────────────────────
 
-def inscrire_collaborateur(
+def inscrire_utilisateur(
     nom          : str,
     prenom       : str,
     email        : str,
     mot_de_passe : str,
 ) -> dict:
     """
-    Inscrit un nouveau collaborateur avec statut
+    Inscrit un nouveau utilisateur avec statut
     'en_attente'. Le super_admin doit approuver
-    le compte avant que le collaborateur puisse
+    le compte avant que le utilisateur puisse
     se connecter.
 
     Args:
-        nom         : Nom du collaborateur
-        prenom      : Prénom du collaborateur
+        nom         : Nom du utilisateur
+        prenom      : Prénom du utilisateur
         email       : Email unique en minuscules
         mot_de_passe: Mot de passe en clair
 
@@ -210,7 +210,7 @@ def inscrire_collaborateur(
             mot_de_passe
         )
 
-        # Étape 3.4 — Insérer le collaborateur
+        # Étape 3.4 — Insérer le utilisateur
         return repo_utilisateurs.inserer_utilisateur(
             connexion,
             nom.strip(),
@@ -223,7 +223,7 @@ def inscrire_collaborateur(
         raise
     except Exception as erreur:
         logger.error(
-            f"Erreur inscription collaborateur : {erreur}"
+            f"Erreur inscription utilisateur : {erreur}"
         )
         raise
     finally:
@@ -307,16 +307,16 @@ def connecter_admin(
         connexion.close()
 
 
-def connecter_collaborateur(
+def connecter_utilisateur(
     email        : str,
     mot_de_passe : str,
 ) -> dict:
     """
-    Authentifie un collaborateur et génère un token JWT.
-    Le collaborateur doit avoir le statut 'approuve'.
+    Authentifie un utilisateur et génère un token JWT.
+    Le utilisateur doit avoir le statut 'approuve'.
 
     Args:
-        email       : Email du collaborateur
+        email       : Email du utilisateur
         mot_de_passe: Mot de passe en clair
 
     Returns:
@@ -329,7 +329,7 @@ def connecter_collaborateur(
     connexion = creer_connexion()
 
     try:
-        # Étape 4.4 — Récupérer le collaborateur
+        # Étape 4.4 — Récupérer le utilisateur
         utilisateur = (
             repo_utilisateurs.obtenir_utilisateur_par_email(
                 connexion, email.lower().strip()
@@ -365,7 +365,7 @@ def connecter_collaborateur(
         })
 
         logger.info(
-            f"Connexion collaborateur : "
+            f"Connexion utilisateur : "
             f"{utilisateur['email']}"
         )
 
@@ -382,7 +382,7 @@ def connecter_collaborateur(
         raise
     except Exception as erreur:
         logger.error(
-            f"Erreur connexion collaborateur : {erreur}"
+            f"Erreur connexion utilisateur : {erreur}"
         )
         raise
     finally:
@@ -404,7 +404,7 @@ def demander_reinitialisation_mdp(
     Le super_admin doit approuver avant application.
 
     Args:
-        email        : Email du collaborateur
+        email        : Email du utilisateur
         nouveau_mdp  : Nouveau mot de passe en clair
         confirmer_mdp: Confirmation du nouveau mot de passe
 

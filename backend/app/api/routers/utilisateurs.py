@@ -5,7 +5,7 @@ Routes de gestion des utilisateurs — /api/v1/utilisateurs/...
 
 Routes définies :
     GET    /api/v1/utilisateurs
-        → Lister tous les collaborateurs (super_admin)
+        → Lister tous les utilisateurs (super_admin)
 
     GET    /api/v1/utilisateurs/demandes
         → Demandes d'inscription en attente (super_admin)
@@ -14,13 +14,13 @@ Routes définies :
         → Demandes de reset mdp en attente (super_admin)
 
     GET    /api/v1/utilisateurs/{id}
-        → Détails d'un collaborateur + ses projets
+        → Détails d'un utilisateur + ses projets
 
     PUT    /api/v1/utilisateurs/{id}
-        → Modifier un collaborateur (super_admin)
+        → Modifier un utilisateur (super_admin)
 
     DELETE /api/v1/utilisateurs/{id}
-        → Supprimer un collaborateur (super_admin)
+        → Supprimer un utilisateur (super_admin)
 
     PUT    /api/v1/utilisateurs/{id}/approuver
         → Approuver une inscription (super_admin)
@@ -71,13 +71,13 @@ router = APIRouter(
 @router.get(
     "",
     response_model=list[UtilisateurReponseModele],
-    summary="Lister tous les collaborateurs",
+    summary="Lister tous les utilisateurs",
 )
 def lister_utilisateurs(
     admin: dict = Depends(verifier_super_admin),
 ) -> list:
     """
-    Retourne la liste de tous les collaborateurs.
+    Retourne la liste de tous les utilisateurs.
     Les mots de passe ne sont jamais inclus.
     Réservé au super_admin.
     """
@@ -94,7 +94,7 @@ def lister_demandes_en_attente(
     admin: dict = Depends(verifier_super_admin),
 ) -> list:
     """
-    Retourne les collaborateurs en attente d'approbation.
+    Retourne les utilisateurs en attente d'approbation.
     Utilisée par le super_admin pour gérer les inscriptions.
     """
     # Étape 1.2 — Récupérer les demandes en attente
@@ -123,17 +123,17 @@ def lister_demandes_reinitialisation(
 @router.get(
     "/{id_utilisateur}",
     response_model=UtilisateurDetailModele,
-    summary="Détails d'un collaborateur",
+    summary="Détails d'un utilisateur",
 )
 def afficher_utilisateur(
     id_utilisateur: int,
     admin         : dict = Depends(verifier_super_admin),
 ) -> dict:
     """
-    Retourne les détails complets d'un collaborateur
+    Retourne les détails complets d'un utilisateur
     incluant la liste de tous ses projets accessibles.
     """
-    # Étape 1.4 — Récupérer les détails du collaborateur
+    # Étape 1.4 — Récupérer les détails du utilisateur
     try:
         return service_utilisateurs.afficher_utilisateur(
             id_utilisateur
@@ -152,7 +152,7 @@ def afficher_utilisateur(
 @router.put(
     "/{id_utilisateur}",
     response_model=UtilisateurReponseModele,
-    summary="Modifier un collaborateur",
+    summary="Modifier un utilisateur",
 )
 def modifier_utilisateur(
     id_utilisateur: int,
@@ -160,10 +160,10 @@ def modifier_utilisateur(
     admin         : dict = Depends(verifier_super_admin),
 ) -> dict:
     """
-    Modifie les champs fournis d'un collaborateur.
+    Modifie les champs fournis d'un utilisateur.
     Seuls les champs non nuls sont mis à jour.
     """
-    # Étape 2.1 — Modifier le collaborateur
+    # Étape 2.1 — Modifier le utilisateur
     try:
         return service_utilisateurs.modifier_utilisateur(
             id_utilisateur = id_utilisateur,
@@ -182,24 +182,24 @@ def modifier_utilisateur(
 @router.delete(
     "/{id_utilisateur}",
     response_model=MessageReponseModele,
-    summary="Supprimer un collaborateur",
+    summary="Supprimer un utilisateur",
 )
 def supprimer_utilisateur(
     id_utilisateur: int,
     admin         : dict = Depends(verifier_super_admin),
 ) -> dict:
     """
-    Supprime un collaborateur de la BD.
+    Supprime un utilisateur de la BD.
     Les keynotes créés par cet utilisateur sont conservés.
     """
-    # Étape 2.2 — Supprimer le collaborateur
+    # Étape 2.2 — Supprimer le utilisateur
     try:
         service_utilisateurs.supprimer_utilisateur(
             id_utilisateur
         )
         return {
             "message": (
-                f"Collaborateur {id_utilisateur} "
+                f"utilisateur {id_utilisateur} "
                 "supprimé avec succès."
             )
         }
@@ -224,8 +224,8 @@ def approuver_utilisateur(
     admin         : dict = Depends(verifier_super_admin),
 ) -> dict:
     """
-    Approuve l'inscription d'un collaborateur.
-    Le collaborateur peut ensuite se connecter.
+    Approuve l'inscription d'un utilisateur.
+    Le utilisateur peut ensuite se connecter.
     """
     # Étape 3.1 — Approuver le compte
     try:
@@ -249,7 +249,7 @@ def refuser_utilisateur(
     admin         : dict = Depends(verifier_super_admin),
 ) -> dict:
     """
-    Refuse et supprime le compte d'un collaborateur.
+    Refuse et supprime le compte d'un utilisateur.
     Action irréversible.
     """
     # Étape 3.2 — Refuser et supprimer le compte

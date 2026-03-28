@@ -9,7 +9,7 @@ Rôle :
 
 Schemas définis :
     - LoginAdminModele          connexion super_admin
-    - LoginCollaborateurModele  connexion collaborateur
+    - LoginutilisateurModele  connexion utilisateur
     - RegisterModele            inscription publique
     - TokenModele               réponse JWT
     - ReinitialisationMdpModele demande de reset mdp
@@ -43,13 +43,13 @@ class LoginAdminModele(BaseModel):
     mot_de_passe : str
 
 
-class LoginCollaborateurModele(BaseModel):
+class LoginutilisateurModele(BaseModel):
     """
-    Données requises pour la connexion d'un collaborateur.
+    Données requises pour la connexion d'un utilisateur.
     Route : POST /api/v1/auth/login
     """
 
-    # Étape 1.2 — Champs de connexion collaborateur
+    # Étape 1.2 — Champs de connexion utilisateur
     email        : EmailStr
     mot_de_passe : str
 
@@ -60,7 +60,7 @@ class LoginCollaborateurModele(BaseModel):
 
 class RegisterModele(BaseModel):
     """
-    Données requises pour l'inscription d'un collaborateur.
+    Données requises pour l'inscription d'un utilisateur.
     Route : POST /api/v1/auth/register
 
     Validations appliquées :
@@ -165,7 +165,7 @@ class TokenModele(BaseModel):
     access_token : token JWT signé à inclure dans
                    le header Authorization: Bearer <token>
     token_type   : toujours 'bearer' pour JWT
-    role         : 'super_admin' ou 'editeur'
+    role         : 'super_admin' ou 'utilisateur'
     """
     access_token : str
     token_type   : str = "bearer"
@@ -182,7 +182,7 @@ class ReinitialisationMdpModele(BaseModel):
     de mot de passe.
     Route : PUT /api/v1/auth/reinitialiser-mot-de-passe
 
-    Le collaborateur soumet son email et son nouveau
+    Le utilisateur soumet son email et son nouveau
     mot de passe. Le super_admin doit ensuite approuver
     la demande avant qu'elle soit appliquée.
     """

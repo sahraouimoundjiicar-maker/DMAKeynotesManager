@@ -14,13 +14,13 @@ Routes définies :
         → Lister tous les projets (tous)
 
     GET    /api/v1/projets/{id}
-        → Détails d'un projet + collaborateurs (tous)
+        → Détails d'un projet + utilisateurs (tous)
 
     GET    /api/v1/projets/{id}/keynotes
-        → Toutes les notes avec catégories (éditeur)
+        → Toutes les notes avec catégories (utilisateur)
 
     GET    /api/v1/projets/{id}/keynotes/recherche
-        → Rechercher des keynotes (éditeur)
+        → Rechercher des keynotes (utilisateur)
 
     PUT    /api/v1/projets/{id}
         → Renommer un projet (super_admin)
@@ -49,7 +49,7 @@ from app.api.dependencies import (
     obtenir_utilisateur_actuel,
     obtenir_verificateur_acces,
     verifier_super_admin,
-    verifier_editeur,
+    verifier_utilisateur,
 )
 from app.logger import get_logger
 from app.models.schemas.notes import NoteAvecCategorieModele
@@ -179,7 +179,7 @@ def afficher_projet(
 ) -> dict:
     """
     Retourne les détails d'un projet avec la liste
-    complète des collaborateurs ayant accès.
+    complète des utilisateurs ayant accès.
     """
     # Étape 2.2 — Afficher les détails du projet
     try:
@@ -206,7 +206,7 @@ def lister_keynotes(
         default     = None,
         description = "Filtrer par catégorie (optionnel)",
     ),
-    utilisateur : dict = Depends(verifier_editeur),
+    utilisateur : dict = Depends(verifier_utilisateur),
 ) -> list:
     """
     Retourne toutes les notes d'un projet avec les
@@ -233,7 +233,7 @@ def rechercher_keynotes(
         default     = None,
         description = "Filtrer par catégorie (optionnel)",
     ),
-    utilisateur : dict = Depends(verifier_editeur),
+    utilisateur : dict = Depends(verifier_utilisateur),
 ) -> list:
     """
     Recherche des keynotes par numéro ou description.

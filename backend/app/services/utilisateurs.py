@@ -4,10 +4,10 @@ services/utilisateurs.py
 Logique métier — Utilisateurs.
 
 Rôle :
-    - Gérer le CRUD des collaborateurs
+    - Gérer le CRUD des utilisateurs
     - Approuver ou refuser les inscriptions
     - Approuver ou refuser les reinitialisations mdp
-    - Afficher les détails d'un collaborateur avec ses projets
+    - Afficher les détails d'un utilisateur avec ses projets
 
 Importation :
     from app.services.utilisateurs import (
@@ -37,11 +37,11 @@ logger = get_logger(__name__)
 
 def afficher_utilisateur(id_utilisateur: int) -> dict:
     """
-    Retourne les détails d'un collaborateur avec
+    Retourne les détails d'un utilisateur avec
     la liste de tous les projets auxquels il a accès.
 
     Args:
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         Dictionnaire avec infos + projets accessibles
@@ -52,7 +52,7 @@ def afficher_utilisateur(id_utilisateur: int) -> dict:
     connexion = creer_connexion()
 
     try:
-        # Étape 1.1 — Récupérer les infos du collaborateur
+        # Étape 1.1 — Récupérer les infos du utilisateur
         utilisateur = (
             repo_utilisateurs.obtenir_utilisateur_par_id(
                 connexion, id_utilisateur
@@ -88,11 +88,11 @@ def afficher_utilisateur(id_utilisateur: int) -> dict:
 
 def lister_utilisateurs() -> list[dict]:
     """
-    Retourne la liste de tous les collaborateurs.
+    Retourne la liste de tous les utilisateurs.
     Les mots de passe ne sont jamais inclus.
 
     Returns:
-        Liste des collaborateurs avec leurs infos de base
+        Liste des utilisateurs avec leurs infos de base
     """
     connexion = creer_connexion()
 
@@ -113,11 +113,11 @@ def lister_utilisateurs() -> list[dict]:
 
 def lister_demandes_en_attente() -> list[dict]:
     """
-    Retourne les collaborateurs en attente d'approbation.
+    Retourne les utilisateurs en attente d'approbation.
     Utilisée par le super_admin pour gérer les inscriptions.
 
     Returns:
-        Liste des collaborateurs avec statut 'en_attente'
+        Liste des utilisateurs avec statut 'en_attente'
     """
     connexion = creer_connexion()
 
@@ -149,11 +149,11 @@ def modifier_utilisateur(
     nouveau_mdp    : str | None = None,
 ) -> dict:
     """
-    Modifie les champs fournis d'un collaborateur.
+    Modifie les champs fournis d'un utilisateur.
     Seuls les champs non nuls sont mis à jour.
 
     Args:
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
         nouveau_nom   : Nouveau nom (optionnel)
         nouveau_prenom: Nouveau prénom (optionnel)
         nouveau_email : Nouvel email (optionnel)
@@ -239,13 +239,13 @@ def modifier_utilisateur(
 
 def supprimer_utilisateur(id_utilisateur: int) -> bool:
     """
-    Supprime un collaborateur de la BD.
+    Supprime un utilisateur de la BD.
     Les keynotes créés par cet utilisateur sont conservés
     grâce au ON DELETE SET NULL sur cree_par et
     modifie_par_id dans les tables categories et notes.
 
     Args:
-        id_utilisateur: ID du collaborateur à supprimer
+        id_utilisateur: ID du utilisateur à supprimer
 
     Returns:
         True si la suppression a réussi
@@ -296,12 +296,12 @@ def supprimer_utilisateur(id_utilisateur: int) -> bool:
 
 def approuver_utilisateur(id_utilisateur: int) -> dict:
     """
-    Approuve l'inscription d'un collaborateur.
+    Approuve l'inscription d'un utilisateur.
     Change le statut de 'en_attente' à 'approuve'.
-    Le collaborateur peut ensuite se connecter.
+    Le utilisateur peut ensuite se connecter.
 
     Args:
-        id_utilisateur: ID du collaborateur à approuver
+        id_utilisateur: ID du utilisateur à approuver
 
     Returns:
         Dictionnaire avec les infos mises à jour
@@ -357,11 +357,11 @@ def approuver_utilisateur(id_utilisateur: int) -> dict:
 
 def refuser_utilisateur(id_utilisateur: int) -> bool:
     """
-    Refuse et supprime le compte d'un collaborateur.
+    Refuse et supprime le compte d'un utilisateur.
     Le compte est définitivement supprimé de la BD.
 
     Args:
-        id_utilisateur: ID du collaborateur à refuser
+        id_utilisateur: ID du utilisateur à refuser
 
     Returns:
         True si le refus et la suppression ont réussi
@@ -448,7 +448,7 @@ def approuver_reinitialisation(
     le nouveau mot de passe haché à l'utilisateur.
 
     Args:
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         True si l'approbation a réussi
@@ -480,7 +480,7 @@ def refuser_reinitialisation(id_utilisateur: int) -> bool:
     Refuse et supprime la demande de réinitialisation.
 
     Args:
-        id_utilisateur: ID du collaborateur
+        id_utilisateur: ID du utilisateur
 
     Returns:
         True si le refus a réussi

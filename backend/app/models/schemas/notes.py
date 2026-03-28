@@ -107,7 +107,7 @@ class ModifierNoteModele(BaseModel):
 
     version_actuelle est obligatoire pour le verrouillage
     optimiste — détecte les modifications simultanées
-    entre collaborateurs.
+    entre utilisateurs.
     Les autres champs sont optionnels.
     """
 

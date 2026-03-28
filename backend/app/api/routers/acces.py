@@ -5,10 +5,10 @@ Routes de gestion des accès projets — /api/v1/projets/...
 
 Routes définies :
     POST   /api/v1/projets/{id}/acces
-        → Attribuer l'accès à un collaborateur (super_admin)
+        → Attribuer l'accès à un utilisateur (super_admin)
 
     DELETE /api/v1/projets/{id}/acces/{id_utilisateur}
-        → Retirer l'accès d'un collaborateur (super_admin)
+        → Retirer l'accès d'un utilisateur (super_admin)
 
 Importation dans main.py :
     from app.api.routers import acces
@@ -45,7 +45,7 @@ router = APIRouter(prefix="/projets", tags=["Accès"])
     "/{id_projet}/acces",
     response_model=AccesReponseModele,
     status_code=status.HTTP_201_CREATED,
-    summary="Attribuer l'accès à un collaborateur",
+    summary="Attribuer l'accès à un utilisateur",
 )
 def attribuer_acces(
     id_projet: int,
@@ -53,13 +53,13 @@ def attribuer_acces(
     admin    : dict = Depends(verifier_super_admin),
 ) -> dict:
     """
-    Donne l'accès à un collaborateur approuvé pour
+    Donne l'accès à un utilisateur approuvé pour
     un projet spécifique.
-    Le collaborateur doit avoir le statut 'approuve'
+    Le utilisateur doit avoir le statut 'approuve'
     pour recevoir un accès.
     Réservé au super_admin uniquement.
     """
-    # Étape 1.1 — Attribuer l'accès au collaborateur
+    # Étape 1.1 — Attribuer l'accès au utilisateur
     try:
         return service_acces.attribuer_acces(
             id_projet      = id_projet,
@@ -80,7 +80,7 @@ def attribuer_acces(
 @router.delete(
     "/{id_projet}/acces/{id_utilisateur}",
     response_model=MessageReponseModele,
-    summary="Retirer l'accès d'un collaborateur",
+    summary="Retirer l'accès d'un utilisateur",
 )
 def retirer_acces(
     id_projet     : int,
@@ -88,12 +88,12 @@ def retirer_acces(
     admin         : dict = Depends(verifier_super_admin),
 ) -> dict:
     """
-    Retire l'accès d'un collaborateur à un projet.
-    Le collaborateur ne pourra plus accéder aux keynotes
+    Retire l'accès d'un utilisateur à un projet.
+    Le utilisateur ne pourra plus accéder aux keynotes
     de ce projet après cette opération.
     Réservé au super_admin uniquement.
     """
-    # Étape 2.1 — Retirer l'accès du collaborateur
+    # Étape 2.1 — Retirer l'accès du utilisateur
     try:
         service_acces.retirer_acces(
             id_projet      = id_projet,
