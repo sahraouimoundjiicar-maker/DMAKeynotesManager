@@ -44,17 +44,7 @@ const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) =
     return () => clearTimeout(minuterie);
   }, [onClose]);
 
-  return (
-    <div className={`notification ${type}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-      <span>{message}</span>
-      <button
-        onClick={onClose}
-        style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '16px', padding: '0', lineHeight: 1 }}
-      >
-        ✖
-      </button>
-    </div>
-  );
+  return <div className={`notification ${type}`}>{message}</div>;
 };
 
 // ============================================================
