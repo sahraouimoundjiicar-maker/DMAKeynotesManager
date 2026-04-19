@@ -1344,9 +1344,15 @@ const Keynotes: React.FC = () => {
         {/* -------------------------------------------------- */}
         <div className="section">
           <table className="data-table" id="dataTable">
+            {/* Largeur fixe pour la colonne N° — évite que les numéros longs
+                élargissent la colonne et décalent tout le tableau */}
+            <colgroup>
+              <col style={{ width: '120px', minWidth: '120px' }} />
+              <col />
+            </colgroup>
             <thead>
               <tr>
-                <th>N°</th>
+                <th style={{ width: '120px' }}>N°</th>
                 <th>Description</th>
               </tr>
             </thead>
