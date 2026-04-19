@@ -22,6 +22,7 @@ import { projetsService, categoriesService, notesService } from '../api/api';
 interface Projet {
   id: number;
   nom: string;
+  chemin_export: string | null;
   date_creation: string;
 }
 
@@ -973,12 +974,21 @@ const Keynotes: React.FC = () => {
       return;
     }
     try {
-      afficherNotification('Export en cours...', 'info');
-      // Récupérer le nom du projet pour le nom du fichier téléchargé
       const projetActuel = projets.find((p) => p.id === idProjetSelectionne);
-      const nomProjet = projetActuel?.nom ?? 'projet';
+      const nomProjet    = projetActuel?.nom ?? 'projet';
+
+      // Afficher le chemin cible si défini — aide l'utilisateur
+      // à naviguer vers le bon dossier dans la fenêtre Windows
+      if (projetActuel?.chemin_export) {
+        afficherNotification(
+          `Naviguez vers : ${projetActuel.chemin_export}`,
+          'info'
+        );
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+
       await projetsService.exporter(idProjetSelectionne, nomProjet);
-      afficherNotification('Fichier téléchargé avec succès', 'success');
+      afficherNotification('Fichier exporté avec succès', 'success');
     } catch (erreur) {
       console.error('Erreur export:', erreur);
       afficherNotification("Erreur lors de l'export", 'error');

@@ -637,11 +637,23 @@ const Projets: React.FC = () => {
       return;
     }
     try {
-      afficherNotification(`Export du projet "${projetSelectionne.nom}" en cours...`, 'info');
-      // Le téléchargement se déclenche automatiquement dans le navigateur
+      // Afficher le chemin cible si défini — aide l'utilisateur
+      // à naviguer vers le bon dossier dans la fenêtre Windows
+      if (projetSelectionne.chemin_export) {
+        afficherNotification(
+          `Naviguez vers : ${projetSelectionne.chemin_export}`,
+          'info'
+        );
+        // Laisser le temps à l'utilisateur de lire le message
+        // avant que la fenêtre "Enregistrer sous" s'ouvre
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+
+      // Déclenche la fenêtre "Enregistrer sous" (Chrome/Edge)
+      // ou le téléchargement classique (Firefox/Safari)
       await projetsService.exporter(projetSelectionne.id, projetSelectionne.nom);
       afficherNotification(
-        `Fichier "${projetSelectionne.nom}" téléchargé avec succès`,
+        `Fichier "${projetSelectionne.nom}" exporté avec succès`,
         'success'
       );
       // Recharge pour mettre à jour txt_a_jour et date_dernier_export
