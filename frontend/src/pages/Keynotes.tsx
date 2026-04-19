@@ -1,0 +1,1202 @@
+// src/pages/Keynotes.tsx
+//
+// Composant de gestion des keynotes Revit.
+// Architecture : état géré exclusivement par useState → React re-rend le JSX automatiquement.
+// Aucune manipulation directe du DOM (pas de innerHTML, pas de ref sur les inputs,
+// pas de window.* global, pas de addEventListener manuel).
+//
+// Structure des données :
+//   Projet (sélectionné dans le select)
+//     └─ Catégorie (collapsible dans le tableau)
+//          └─ Note (collapsible dans le tableau)
+
+import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { projetsService, categoriesService, notesService } from '../api/api';
+
+// ============================================================
+// SECTION 1 — TYPES
+// ============================================================
+
+// Projet tel que retourné par GET /projets
+interface Projet {
+  id: number;
+  nom: string;
+  date_creation: string;
+}
+
+// Catégorie telle que retournée par GET /projets/{id}/categories
+interface Categorie {
+  id: number;
+  id_projet: number;
+  numero: string;
+  description: string; // L'API appelle ce champ "description" (pas "titre")
+  version: number;
+  nombre_notes: number; // Retourné par lister_categories_du_projet (COUNT des notes)
+}
+
+// Note telle que retournée par GET /projets/{id}/categories/{id}/notes
+interface Note {
+  id: number;
+  id_projet: number;
+  id_categorie: number;
+  numero: string;
+  description: string;
+  version: number;
+}
+
+// État de collapse pour le tableau arborescent — stocké séparément des données API
+interface EtatCollapse {
+  projetsCollapsed: Record<number, boolean>;   // true = fermé, false = ouvert
+  categoriesCollapsed: Record<number, boolean>;
+}
+
+// Type de l'élément actuellement sélectionné dans le formulaire
+type TypeSelection = 'aucun' | 'categorie' | 'note';
+
+// Mode du formulaire pour la catégorie et la note
+type ModeFormulaire = 'creation' | 'lecture' | 'edition';
+
+// Formulaire catégorie (champs contrôlés)
+interface EtatFormCategorie {
+  numero: string;
+  description: string;
+}
+
+// Formulaire note (champs contrôlés)
+interface EtatFormNote {
+  idCategorie: number | null;
+  numero: string;
+  description: string;
+}
+
+const FORM_CATEGORIE_VIDE: EtatFormCategorie = { numero: '', description: '' };
+const FORM_NOTE_VIDE: EtatFormNote = { idCategorie: null, numero: '', description: '' };
+
+// Type de recherche dans le champ recherche
+type TypeRecherche = 'note' | 'categorie';
+
+// ============================================================
+// SECTION 2 — FONCTIONS UTILITAIRES PURES (hors composant)
+// ============================================================
+
+function normaliserChaine(texte: string): string {
+  return texte
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[œ]/g, 'oe')
+    .replace(/[æ]/g, 'ae');
+}
+
+// Trie numériquement (1, 2, 10 au lieu de 1, 10, 2)
+function trierParNumero<T extends { numero: string }>(liste: T[]): T[] {
+  return [...liste].sort((a, b) => {
+    const numA = parseFloat(a.numero) || 0;
+    const numB = parseFloat(b.numero) || 0;
+    return numA !== numB ? numA - numB : a.numero.localeCompare(b.numero);
+  });
+}
+
+// ============================================================
+// SECTION 3 — SOUS-COMPOSANT : Notification
+// ============================================================
+
+interface PropsNotification {
+  message: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  onClose: () => void;
+}
+
+const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const minuterie = setTimeout(onClose, 3000);
+    return () => clearTimeout(minuterie);
+  }, [onClose]);
+
+  return <div className={`notification ${type}`}>{message}</div>;
+};
+
+// ============================================================
+// SECTION 4 — SOUS-COMPOSANT : Champ de recherche avec suggestions
+// ============================================================
+
+interface PropsChampRecherche<T> {
+  id: string;
+  placeholder: string;
+  valeur: string;
+  suggestions: T[];
+  renduSuggestion: (element: T) => React.ReactNode;
+  cléSuggestion: (element: T) => string;
+  onChangement: (valeur: string) => void;
+  onSelectionSuggestion: (element: T) => void;
+  onEffacer: () => void;
+}
+
+function ChampRecherche<T>({
+  id,
+  placeholder,
+  valeur,
+  suggestions,
+  renduSuggestion,
+  cléSuggestion,
+  onChangement,
+  onSelectionSuggestion,
+  onEffacer,
+}: PropsChampRecherche<T>) {
+  const [suggestionVisible, setSuggestionVisible] = useState(false);
+
+  useEffect(() => {
+    function gererClicExterieur(evenement: MouseEvent) {
+      const conteneur = document.getElementById(`conteneur-recherche-${id}`);
+      if (conteneur && !conteneur.contains(evenement.target as Node)) {
+        setSuggestionVisible(false);
+      }
+    }
+    document.addEventListener('mousedown', gererClicExterieur);
+    return () => document.removeEventListener('mousedown', gererClicExterieur);
+  }, [id]);
+
+  function gererChangement(e: React.ChangeEvent<HTMLInputElement>) {
+    const nouvelleValeur = e.target.value;
+    onChangement(nouvelleValeur);
+    setSuggestionVisible(nouvelleValeur.trim().length >= 2 && suggestions.length > 0);
+  }
+
+  useEffect(() => {
+    setSuggestionVisible(valeur.trim().length >= 2 && suggestions.length > 0);
+  }, [suggestions, valeur]);
+
+  return (
+    <div id={`conteneur-recherche-${id}`} className="suggestions-container">
+      <div className="search-wrapper">
+        <input
+          type="text"
+          id={id}
+          className="search-input"
+          placeholder={placeholder}
+          value={valeur}
+          onChange={gererChangement}
+          autoComplete="off"
+        />
+        {valeur.trim().length > 0 && (
+          <button className="clear-search visible" type="button" onClick={onEffacer}>
+            ✖
+          </button>
+        )}
+      </div>
+
+      {suggestionVisible && suggestions.length > 0 && (
+        <div className="suggestions" style={{ display: 'block' }}>
+          {suggestions.map((element) => (
+            <div
+              key={cléSuggestion(element)}
+              className="suggestion-item"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onSelectionSuggestion(element);
+                setSuggestionVisible(false);
+              }}
+            >
+              {renduSuggestion(element)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// SECTION 5 — COMPOSANT PRINCIPAL
+// ============================================================
+
+const Keynotes: React.FC = () => {
+  const navigate = useNavigate();
+
+  // --- Données chargées depuis l'API ---
+  const [projets, setProjets] = useState<Projet[]>([]);
+  const [categories, setCategories] = useState<Categorie[]>([]);
+  // Notes indexées par id_categorie pour un accès rapide
+  const [notesParCategorie, setNotesParCategorie] = useState<Record<number, Note[]>>({});
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isChargementCategories, setIsChargementCategories] = useState(false);
+
+  // --- Projet sélectionné dans le select ---
+  const [idProjetSelectionne, setIdProjetSelectionne] = useState<number | null>(null);
+
+  // --- État de collapse du tableau arborescent ---
+  const [etatCollapse, setEtatCollapse] = useState<EtatCollapse>({
+    projetsCollapsed: {},
+    categoriesCollapsed: {},
+  });
+
+  // --- Sélection courante (catégorie OU note, jamais les deux) ---
+  const [typeSelection, setTypeSelection] = useState<TypeSelection>('aucun');
+  const [categorieSelectionnee, setCategorieSelectionnee] = useState<Categorie | null>(null);
+  const [noteSelectionnee, setNoteSelectionnee] = useState<Note | null>(null);
+
+  // --- Formulaires ---
+  const [modeCategorie, setModeCategorie] = useState<ModeFormulaire>('creation');
+  const [modeNote, setModeNote] = useState<ModeFormulaire>('creation');
+  const [formCategorie, setFormCategorie] = useState<EtatFormCategorie>(FORM_CATEGORIE_VIDE);
+  const [formNote, setFormNote] = useState<EtatFormNote>(FORM_NOTE_VIDE);
+
+  // --- Recherche ---
+  const [typeRecherche, setTypeRecherche] = useState<TypeRecherche>('note');
+  const [texteRecherche, setTexteRecherche] = useState('');
+
+  // --- Notifications ---
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+    cle: number;
+  } | null>(null);
+
+  // ============================================================
+  // SECTION 6 — DONNÉES DÉRIVÉES
+  // ============================================================
+
+  // Projet actuellement sélectionné (objet complet)
+  const projetSelectionne = projets.find((p) => p.id === idProjetSelectionne) ?? null;
+
+  // Catégories du projet sélectionné, triées numériquement
+  const categoriesProjetActuel = idProjetSelectionne
+    ? trierParNumero(categories.filter((c) => c.id_projet === idProjetSelectionne))
+    : [];
+
+  // Projets filtrés pour le tableau — si un projet est sélectionné, on n'affiche que lui
+  const projetsPourTableau = idProjetSelectionne
+    ? projets.filter((p) => p.id === idProjetSelectionne)
+    : projets;
+
+  // Suggestions de recherche — catégories ou notes selon le type sélectionné
+  const suggestionsCategorieRecherche: Categorie[] =
+    typeRecherche === 'categorie' && texteRecherche.trim().length >= 2
+      ? categories
+          .filter(
+            (c) =>
+              (!idProjetSelectionne || c.id_projet === idProjetSelectionne) &&
+              (normaliserChaine(c.numero).includes(normaliserChaine(texteRecherche)) ||
+                normaliserChaine(c.description).includes(normaliserChaine(texteRecherche)))
+          )
+          .slice(0, 10)
+      : [];
+
+  const suggestionsNoteRecherche: Note[] =
+    typeRecherche === 'note' && texteRecherche.trim().length >= 2
+      ? Object.values(notesParCategorie)
+          .flat()
+          .filter(
+            (n) =>
+              (!idProjetSelectionne || n.id_projet === idProjetSelectionne) &&
+              (normaliserChaine(n.numero).includes(normaliserChaine(texteRecherche)) ||
+                normaliserChaine(n.description).includes(normaliserChaine(texteRecherche)))
+          )
+          .slice(0, 10)
+      : [];
+
+  // Détermine si les champs catégorie sont modifiables
+  const categorieEstModifiable = modeCategorie === 'creation' || modeCategorie === 'edition';
+
+  // Détermine si les champs note sont modifiables
+  const noteEstModifiable = modeNote === 'creation' || modeNote === 'edition';
+
+  // Détermine si le bouton "Annuler" est actif
+  const annulerEstActif = modeCategorie === 'edition' || modeNote === 'edition';
+
+  // ============================================================
+  // SECTION 7 — NOTIFICATIONS
+  // ============================================================
+
+  function afficherNotification(
+    message: string,
+    type: 'success' | 'error' | 'warning' | 'info' = 'success'
+  ) {
+    setNotification({ message, type, cle: Date.now() });
+  }
+
+  // ============================================================
+  // SECTION 8 — CHARGEMENT DES DONNÉES DEPUIS L'API
+  // ============================================================
+
+  const chargerProjets = useCallback(async () => {
+    try {
+      const reponse = await projetsService.getAll();
+      setProjets(reponse.data);
+      // Initialise l'état collapse : tous les projets fermés
+      const collapsed: Record<number, boolean> = {};
+      reponse.data.forEach((p: Projet) => { collapsed[p.id] = true; });
+      setEtatCollapse((prev) => ({ ...prev, projetsCollapsed: collapsed }));
+    } catch (erreur) {
+      console.error('Erreur chargement projets:', erreur);
+      afficherNotification('Erreur lors du chargement des projets', 'error');
+    }
+  }, []);
+
+  // Charge les catégories d'un projet et toutes leurs notes
+  const chargerCategoriesEtNotes = useCallback(async (idProjet: number) => {
+    setIsChargementCategories(true);
+    try {
+      // Étape 1 — Charge les catégories du projet
+      const reponseCat = await categoriesService.getAll(idProjet);
+      const nouvellesCategories: Categorie[] = reponseCat.data;
+
+      // Met à jour les catégories en remplaçant celles du projet sélectionné
+      setCategories((prev) => {
+        const autresProjets = prev.filter((c) => c.id_projet !== idProjet);
+        return [...autresProjets, ...nouvellesCategories];
+      });
+
+      // Initialise l'état collapse pour les nouvelles catégories
+      setEtatCollapse((prev) => {
+        const newCatCollapsed = { ...prev.categoriesCollapsed };
+        nouvellesCategories.forEach((c) => { newCatCollapsed[c.id] = true; });
+        return { ...prev, categoriesCollapsed: newCatCollapsed };
+      });
+
+      // Étape 2 — Charge les notes pour chaque catégorie
+      const notesChargees: Record<number, Note[]> = {};
+      await Promise.all(
+        nouvellesCategories.map(async (categorie) => {
+          try {
+            const reponseNotes = await notesService.getAll(idProjet, categorie.id);
+            notesChargees[categorie.id] = reponseNotes.data;
+          } catch {
+            notesChargees[categorie.id] = [];
+          }
+        })
+      );
+
+      setNotesParCategorie((prev) => {
+        // Supprime les notes des catégories de l'ancien projet
+        const notesAutresProjets: Record<number, Note[]> = {};
+        Object.entries(prev).forEach(([idCat, notes]) => {
+          if (!nouvellesCategories.some((c) => c.id === Number(idCat))) {
+            notesAutresProjets[Number(idCat)] = notes;
+          }
+        });
+        return { ...notesAutresProjets, ...notesChargees };
+      });
+
+    } catch (erreur) {
+      console.error('Erreur chargement catégories/notes:', erreur);
+      afficherNotification('Erreur lors du chargement des catégories', 'error');
+    } finally {
+      setIsChargementCategories(false);
+    }
+  }, []);
+
+  // ============================================================
+  // SECTION 9 — INITIALISATION AU MONTAGE
+  // ============================================================
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/connexion');
+      return;
+    }
+    async function initialiser() {
+      setIsLoading(true);
+      await chargerProjets();
+      setIsLoading(false);
+    }
+    initialiser();
+  }, [navigate, chargerProjets]);
+
+  // ============================================================
+  // SECTION 10 — CHANGEMENT DE PROJET SÉLECTIONNÉ
+  // ============================================================
+
+  async function changerProjet(idProjet: number | null) {
+    setIdProjetSelectionne(idProjet);
+    reinitialiserFormulaires();
+
+    if (idProjet === null) {
+      // Aucun projet — ferme tout dans le tableau
+      setEtatCollapse((prev) => {
+        const collapsed = { ...prev.projetsCollapsed };
+        Object.keys(collapsed).forEach((k) => { collapsed[Number(k)] = true; });
+        return { ...prev, projetsCollapsed: collapsed };
+      });
+      return;
+    }
+
+    // Charge les catégories et notes du projet sélectionné
+    await chargerCategoriesEtNotes(idProjet);
+
+    // Ouvre le projet sélectionné dans le tableau, ferme les autres
+    setEtatCollapse((prev) => {
+      const newProjetsCollapsed = { ...prev.projetsCollapsed };
+      Object.keys(newProjetsCollapsed).forEach((k) => {
+        newProjetsCollapsed[Number(k)] = Number(k) !== idProjet;
+      });
+      return { ...prev, projetsCollapsed: newProjetsCollapsed };
+    });
+  }
+
+  // ============================================================
+  // SECTION 11 — TOGGLE COLLAPSE TABLEAU
+  // ============================================================
+
+  function toggleProjet(idProjet: number) {
+    setEtatCollapse((prev) => ({
+      ...prev,
+      projetsCollapsed: {
+        ...prev.projetsCollapsed,
+        [idProjet]: !prev.projetsCollapsed[idProjet],
+      },
+    }));
+  }
+
+  function toggleCategorie(idCategorie: number) {
+    setEtatCollapse((prev) => ({
+      ...prev,
+      categoriesCollapsed: {
+        ...prev.categoriesCollapsed,
+        [idCategorie]: !prev.categoriesCollapsed[idCategorie],
+      },
+    }));
+  }
+
+  // ============================================================
+  // SECTION 12 — RÉINITIALISATION DES FORMULAIRES
+  // ============================================================
+
+  function reinitialiserFormulaires() {
+    setTypeSelection('aucun');
+    setCategorieSelectionnee(null);
+    setNoteSelectionnee(null);
+    setModeCategorie('creation');
+    setModeNote('creation');
+    setFormCategorie(FORM_CATEGORIE_VIDE);
+    setFormNote(FORM_NOTE_VIDE);
+    setTexteRecherche('');
+  }
+
+  // ============================================================
+  // SECTION 13 — SÉLECTION CATÉGORIE (depuis suggestion ou tableau)
+  // ============================================================
+
+  function selectionnerCategorie(categorie: Categorie) {
+    setTypeSelection('categorie');
+    setCategorieSelectionnee(categorie);
+    setNoteSelectionnee(null);
+    setModeCategorie('lecture');
+    setModeNote('creation');
+    setFormCategorie({ numero: categorie.numero, description: categorie.description });
+    setFormNote(FORM_NOTE_VIDE);
+    setTexteRecherche(`${categorie.numero} — ${categorie.description}`);
+
+    // Ouvre la catégorie dans le tableau
+    setEtatCollapse((prev) => ({
+      ...prev,
+      projetsCollapsed: { ...prev.projetsCollapsed, [categorie.id_projet]: false },
+      categoriesCollapsed: { ...prev.categoriesCollapsed, [categorie.id]: false },
+    }));
+
+    afficherNotification(
+      `Catégorie "${categorie.numero} — ${categorie.description}" sélectionnée`,
+      'info'
+    );
+  }
+
+  // ============================================================
+  // SECTION 14 — SÉLECTION NOTE (depuis suggestion ou tableau)
+  // ============================================================
+
+  function selectionnerNote(note: Note) {
+    setTypeSelection('note');
+    setNoteSelectionnee(note);
+    setCategorieSelectionnee(null);
+    setModeNote('lecture');
+    setModeCategorie('creation');
+    setFormNote({
+      idCategorie: note.id_categorie,
+      numero: note.numero,
+      description: note.description,
+    });
+    setFormCategorie(FORM_CATEGORIE_VIDE);
+    setTexteRecherche(
+      `${note.numero} — ${note.description.substring(0, 50)}${note.description.length > 50 ? '...' : ''}`
+    );
+
+    // Ouvre le projet et la catégorie de la note dans le tableau
+    setEtatCollapse((prev) => ({
+      ...prev,
+      projetsCollapsed: { ...prev.projetsCollapsed, [note.id_projet]: false },
+      categoriesCollapsed: { ...prev.categoriesCollapsed, [note.id_categorie]: false },
+    }));
+
+    afficherNotification(`Note "${note.numero}" sélectionnée`, 'info');
+  }
+
+  // ============================================================
+  // SECTION 15 — ACTIONS MODIFIER / ANNULER
+  // ============================================================
+
+  function activerEditionCategorie() {
+    if (typeSelection !== 'categorie' || !categorieSelectionnee) {
+      afficherNotification('Veuillez d\'abord sélectionner une catégorie', 'warning');
+      return;
+    }
+    setModeCategorie('edition');
+    afficherNotification('Mode édition catégorie activé', 'warning');
+  }
+
+  function activerEditionNote() {
+    if (typeSelection !== 'note' || !noteSelectionnee) {
+      afficherNotification('Veuillez d\'abord sélectionner une note', 'warning');
+      return;
+    }
+    setModeNote('edition');
+    afficherNotification('Mode édition note activé', 'warning');
+  }
+
+  function handleModifier() {
+    if (typeSelection === 'categorie') activerEditionCategorie();
+    else if (typeSelection === 'note') activerEditionNote();
+    else afficherNotification('Veuillez d\'abord sélectionner une catégorie ou une note', 'warning');
+  }
+
+  function annuler() {
+    if (modeCategorie === 'edition' && categorieSelectionnee) {
+      // Restaure les valeurs originales de la catégorie
+      setFormCategorie({ numero: categorieSelectionnee.numero, description: categorieSelectionnee.description });
+      setModeCategorie('lecture');
+      afficherNotification('Modifications annulées', 'warning');
+    } else if (modeNote === 'edition' && noteSelectionnee) {
+      // Restaure les valeurs originales de la note
+      setFormNote({
+        idCategorie: noteSelectionnee.id_categorie,
+        numero: noteSelectionnee.numero,
+        description: noteSelectionnee.description,
+      });
+      setModeNote('lecture');
+      afficherNotification('Modifications annulées', 'warning');
+    }
+  }
+
+  // ============================================================
+  // SECTION 16 — ENREGISTREMENT (catégorie ou note selon le contexte)
+  // ============================================================
+
+  async function handleEnregistrer() {
+    // Détermine si on enregistre une catégorie ou une note selon les champs remplis
+    const categorieARemplir = formCategorie.numero.trim() !== '' || formCategorie.description.trim() !== '';
+    if (categorieARemplir) {
+      await enregistrerCategorie();
+    } else {
+      await enregistrerNote();
+    }
+  }
+
+  // --- Catégorie ---
+  async function enregistrerCategorie() {
+    if (!idProjetSelectionne) {
+      afficherNotification('Veuillez d\'abord sélectionner un projet', 'warning');
+      return;
+    }
+    if (!formCategorie.numero.trim()) {
+      afficherNotification('Le numéro de la catégorie est obligatoire', 'error');
+      return;
+    }
+    if (!formCategorie.description.trim()) {
+      afficherNotification('La description de la catégorie est obligatoire', 'error');
+      return;
+    }
+
+    // --- CAS 1 : MODIFICATION ---
+    if (modeCategorie === 'edition' && categorieSelectionnee) {
+      try {
+        await categoriesService.update(idProjetSelectionne, categorieSelectionnee.id, {
+          version_actuelle: categorieSelectionnee.version,
+          nouveau_numero: formCategorie.numero.trim(),
+          nouvelle_desc: formCategorie.description.trim(),
+        });
+        afficherNotification(
+          `Catégorie "${formCategorie.numero} — ${formCategorie.description}" mise à jour`,
+          'success'
+        );
+        await chargerCategoriesEtNotes(idProjetSelectionne);
+        reinitialiserFormulaires();
+      } catch (erreur: any) {
+        console.error('Erreur modification catégorie:', erreur);
+        const messageApi = erreur?.response?.data?.detail || 'Erreur lors de la modification';
+        afficherNotification(messageApi, 'error');
+      }
+      return;
+    }
+
+    // --- CAS 2 : CRÉATION ---
+    try {
+      await categoriesService.create(idProjetSelectionne, {
+        numero: formCategorie.numero.trim(),
+        description: formCategorie.description.trim(),
+      });
+      afficherNotification(
+        `Catégorie "${formCategorie.numero} — ${formCategorie.description}" créée`,
+        'success'
+      );
+      await chargerCategoriesEtNotes(idProjetSelectionne);
+      setFormCategorie(FORM_CATEGORIE_VIDE);
+    } catch (erreur: any) {
+      console.error('Erreur création catégorie:', erreur);
+      const messageApi = erreur?.response?.data?.detail || 'Erreur lors de la création';
+      afficherNotification(messageApi, 'error');
+    }
+  }
+
+  // --- Note ---
+  async function enregistrerNote() {
+    if (!idProjetSelectionne) {
+      afficherNotification('Veuillez d\'abord sélectionner un projet', 'warning');
+      return;
+    }
+    if (!formNote.idCategorie) {
+      afficherNotification('Veuillez sélectionner une catégorie pour la note', 'error');
+      return;
+    }
+    if (!formNote.numero.trim()) {
+      afficherNotification('Le numéro de la note est obligatoire', 'error');
+      return;
+    }
+    if (!formNote.description.trim()) {
+      afficherNotification('La description de la note est obligatoire', 'error');
+      return;
+    }
+
+    // --- CAS 1 : MODIFICATION ---
+    if (modeNote === 'edition' && noteSelectionnee) {
+      try {
+        await notesService.update(idProjetSelectionne, noteSelectionnee.id, {
+          version_actuelle: noteSelectionnee.version,
+          nouveau_numero: formNote.numero.trim(),
+          nouvelle_desc: formNote.description.trim(),
+        });
+        afficherNotification(`Note "${formNote.numero}" mise à jour`, 'success');
+        await chargerCategoriesEtNotes(idProjetSelectionne);
+        reinitialiserFormulaires();
+      } catch (erreur: any) {
+        console.error('Erreur modification note:', erreur);
+        const messageApi = erreur?.response?.data?.detail || 'Erreur lors de la modification';
+        afficherNotification(messageApi, 'error');
+      }
+      return;
+    }
+
+    // --- CAS 2 : CRÉATION ---
+    try {
+      await notesService.create(idProjetSelectionne, formNote.idCategorie, {
+        numero: formNote.numero.trim(),
+        description: formNote.description.trim(),
+      });
+      afficherNotification(`Note "${formNote.numero}" créée`, 'success');
+      await chargerCategoriesEtNotes(idProjetSelectionne);
+      setFormNote(FORM_NOTE_VIDE);
+    } catch (erreur: any) {
+      console.error('Erreur création note:', erreur);
+      const messageApi = erreur?.response?.data?.detail || 'Erreur lors de la création';
+      afficherNotification(messageApi, 'error');
+    }
+  }
+
+  // ============================================================
+  // SECTION 17 — SUPPRESSION
+  // ============================================================
+
+  async function handleSupprimer() {
+    if (typeSelection === 'categorie') await supprimerCategorie();
+    else if (typeSelection === 'note') await supprimerNote();
+    else afficherNotification('Veuillez d\'abord sélectionner une catégorie ou une note', 'warning');
+  }
+
+  async function supprimerCategorie() {
+    if (!categorieSelectionnee || !idProjetSelectionne) return;
+
+    // Vérifie qu'il n'y a plus de notes dans cette catégorie.
+    // On utilise nombre_notes retourné directement par l'API (plus fiable que le count local).
+    // Fallback sur le count local si nombre_notes n'est pas encore chargé.
+    const nombreNotesApi = categorieSelectionnee.nombre_notes;
+    const nombreNotesLocal = (notesParCategorie[categorieSelectionnee.id] ?? []).length;
+    const nombreNotes = nombreNotesApi ?? nombreNotesLocal;
+
+    if (nombreNotes > 0) {
+      afficherNotification(
+        `Impossible de supprimer "${categorieSelectionnee.numero} — ${categorieSelectionnee.description}" — supprimez d'abord ses ${nombreNotes} note(s).`,
+        'error'
+      );
+      return;
+    }
+
+    const confirmation = window.confirm(
+      `Êtes-vous sûr de vouloir supprimer la catégorie "${categorieSelectionnee.numero} — ${categorieSelectionnee.description}" ?\n\nCette action est irréversible.`
+    );
+    if (!confirmation) return;
+
+    const labelSauvegarde = `${categorieSelectionnee.numero} — ${categorieSelectionnee.description}`;
+
+    try {
+      await categoriesService.delete(idProjetSelectionne, categorieSelectionnee.id);
+      afficherNotification(`Catégorie "${labelSauvegarde}" supprimée`, 'success');
+      await chargerCategoriesEtNotes(idProjetSelectionne);
+      reinitialiserFormulaires();
+    } catch (erreur: any) {
+      console.error('Erreur suppression catégorie:', erreur);
+      const messageApi = erreur?.response?.data?.detail || 'Erreur lors de la suppression';
+      afficherNotification(messageApi, 'error');
+    }
+  }
+
+  async function supprimerNote() {
+    if (!noteSelectionnee || !idProjetSelectionne) return;
+
+    const apercu =
+      noteSelectionnee.description.length > 50
+        ? noteSelectionnee.description.substring(0, 50) + '...'
+        : noteSelectionnee.description;
+
+    const confirmation = window.confirm(
+      `Êtes-vous sûr de vouloir supprimer la note "${noteSelectionnee.numero} — ${apercu}" ?\n\nCette action est irréversible.`
+    );
+    if (!confirmation) return;
+
+    const numeroSauvegarde = noteSelectionnee.numero;
+
+    try {
+      await notesService.delete(idProjetSelectionne, noteSelectionnee.id);
+      afficherNotification(`Note "${numeroSauvegarde}" supprimée`, 'success');
+      await chargerCategoriesEtNotes(idProjetSelectionne);
+      reinitialiserFormulaires();
+    } catch (erreur: any) {
+      console.error('Erreur suppression note:', erreur);
+      const messageApi = erreur?.response?.data?.detail || 'Erreur lors de la suppression';
+      afficherNotification(messageApi, 'error');
+    }
+  }
+
+  // ============================================================
+  // SECTION 18 — EXPORT / IMPORT
+  // ============================================================
+
+  async function exporterProjet() {
+    if (!idProjetSelectionne) {
+      afficherNotification('Veuillez d\'abord sélectionner un projet', 'warning');
+      return;
+    }
+    try {
+      afficherNotification('Export en cours...', 'info');
+      await projetsService.exporter(idProjetSelectionne);
+      afficherNotification('Export réalisé avec succès', 'success');
+    } catch (erreur) {
+      console.error('Erreur export:', erreur);
+      afficherNotification("Erreur lors de l'export", 'error');
+    }
+  }
+
+  function importerProjet() {
+    afficherNotification('Import — Veuillez sélectionner un fichier .txt Revit', 'info');
+  }
+
+  // ============================================================
+  // SECTION 19 — RENDU CONDITIONNEL : CHARGEMENT
+  // ============================================================
+
+  if (isLoading) {
+    return <div className="container">Chargement...</div>;
+  }
+
+  // ============================================================
+  // SECTION 20 — RENDU DU TABLEAU ARBORESCENT
+  // Le tableau est rendu entièrement en JSX avec .map() imbriqués.
+  // Les lignes projet, catégorie et note ont chacune leur style distinct.
+  // ============================================================
+
+  function renduTableau(): React.ReactNode {
+    return projetsPourTableau.map((projet) => {
+      const estProjetOuvert = !etatCollapse.projetsCollapsed[projet.id];
+      const categoriesDuProjet = trierParNumero(
+        categories.filter((c) => c.id_projet === projet.id)
+      );
+
+      return (
+        <React.Fragment key={projet.id}>
+          {/* LIGNE PROJET */}
+          <tr
+            className="project-row"
+            style={{ cursor: 'pointer' }}
+            onClick={() => toggleProjet(projet.id)}
+          >
+            <td colSpan={2}>
+              <span className="project-icon">{estProjetOuvert ? '▼' : '▶'}</span>{' '}
+              {projet.nom}
+            </td>
+          </tr>
+
+          {/* LIGNES CATÉGORIES ET NOTES (si le projet est ouvert) */}
+          {estProjetOuvert &&
+            categoriesDuProjet.map((categorie) => {
+              const estCategorieOuverte = !etatCollapse.categoriesCollapsed[categorie.id];
+              const notesDeLaCategorie = trierParNumero(notesParCategorie[categorie.id] ?? []);
+
+              return (
+                <React.Fragment key={categorie.id}>
+                  {/* LIGNE CATÉGORIE */}
+                  <tr
+                    className={`category-row ${categorieSelectionnee?.id === categorie.id ? 'row-selected' : ''}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCategorie(categorie.id);
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      // Double-clic sur la catégorie → sélectionne dans le formulaire
+                      if (idProjetSelectionne === categorie.id_projet) {
+                        selectionnerCategorie(categorie);
+                      } else {
+                        afficherNotification(
+                          'Sélectionnez d\'abord ce projet dans le menu déroulant',
+                          'warning'
+                        );
+                      }
+                    }}
+                  >
+                    <td colSpan={2}>
+                      <span className="category-icon">{estCategorieOuverte ? '▼' : '▶'}</span>{' '}
+                      <strong>{categorie.numero}</strong> — {categorie.description}
+                      {/* Compteur de notes — affiché entre parenthèses à droite de la description */}
+                      <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888', fontWeight: 'normal' }}>
+                        ({categorie.nombre_notes ?? notesDeLaCategorie.length} note{(categorie.nombre_notes ?? notesDeLaCategorie.length) !== 1 ? 's' : ''})
+                      </span>
+                    </td>
+                  </tr>
+
+                  {/* LIGNES NOTES (si la catégorie est ouverte) */}
+                  {estCategorieOuverte &&
+                    notesDeLaCategorie.map((note) => (
+                      <tr
+                        key={note.id}
+                        className={noteSelectionnee?.id === note.id ? 'row-selected' : ''}
+                        style={{ cursor: 'pointer' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (idProjetSelectionne === note.id_projet) {
+                            selectionnerNote(note);
+                          } else {
+                            afficherNotification(
+                              'Sélectionnez d\'abord ce projet dans le menu déroulant',
+                              'warning'
+                            );
+                          }
+                        }}
+                      >
+                        <td>{note.numero}</td>
+                        <td className="description-cell">{note.description}</td>
+                      </tr>
+                    ))}
+                </React.Fragment>
+              );
+            })}
+        </React.Fragment>
+      );
+    });
+  }
+
+  // ============================================================
+  // SECTION 21 — RENDU PRINCIPAL (JSX)
+  // ============================================================
+
+  return (
+    <>
+      {notification && (
+        <Notification
+          key={notification.cle}
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
+
+      <div className="container">
+
+        {/* -------------------------------------------------- */}
+        {/* SECTION FORMULAIRE                                  */}
+        {/* -------------------------------------------------- */}
+        <div className="section">
+          <div className="section-header">
+            <h2>Gestion des Keynotes</h2>
+          </div>
+
+          <div className="grid-5x2">
+
+            {/* CELLULE 1 — Sélecteur de projet */}
+            <div className="cell">
+              <div className="cell-title">Projet</div>
+              <select
+                id="projectSelect"
+                className="project-select"
+                value={idProjetSelectionne ?? ''}
+                onChange={(e) => {
+                  const valeur = e.target.value;
+                  changerProjet(valeur === '' ? null : parseInt(valeur));
+                }}
+              >
+                <option value="">— Sélectionner un projet —</option>
+                {projets.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nom}
+                  </option>
+                ))}
+              </select>
+              {isChargementCategories && (
+                <small style={{ color: '#888', marginTop: '4px', display: 'block' }}>
+                  Chargement...
+                </small>
+              )}
+            </div>
+
+            {/* CELLULE 2 — Formulaire catégorie */}
+            <div className="cell">
+              <div className="cell-title">Catégorie</div>
+              <div className="input-group">
+                <input
+                  type="text"
+                  id="categorieNumero"
+                  className="categorie-numero"
+                  placeholder="xxxx"
+                  value={formCategorie.numero}
+                  readOnly={!categorieEstModifiable}
+                  onChange={(e) =>
+                    setFormCategorie({ ...formCategorie, numero: e.target.value })
+                  }
+                />
+                <input
+                  type="text"
+                  id="categorieTitre"
+                  className="categorie-titre"
+                  placeholder="Saisir votre nouvelle catégorie"
+                  value={formCategorie.description}
+                  readOnly={!categorieEstModifiable}
+                  maxLength={500}
+                  onChange={(e) =>
+                    setFormCategorie({ ...formCategorie, description: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            {/* CELLULE 3+4+5 — Formulaire note */}
+            <div className="cell-span-3">
+              <div className="cell-title">Note</div>
+              <div className="input-group-note">
+                {/* Select catégorie pour la note */}
+                <select
+                  id="noteCategorieSelect"
+                  className="category-select"
+                  value={formNote.idCategorie ?? ''}
+                  disabled={!noteEstModifiable || !idProjetSelectionne}
+                  onChange={(e) =>
+                    setFormNote({
+                      ...formNote,
+                      idCategorie: e.target.value === '' ? null : parseInt(e.target.value),
+                    })
+                  }
+                >
+                  <option value="">
+                    {idProjetSelectionne
+                      ? '— Sélectionner une catégorie —'
+                      : '— Sélectionner un projet d\'abord —'}
+                  </option>
+                  {categoriesProjetActuel.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.numero} — {c.description}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  type="text"
+                  id="noteNumero"
+                  className="input-number"
+                  placeholder="xxx"
+                  value={formNote.numero}
+                  readOnly={!noteEstModifiable}
+                  onChange={(e) => setFormNote({ ...formNote, numero: e.target.value })}
+                />
+
+                <textarea
+                  id="noteDescription"
+                  className="textarea-description"
+                  placeholder="Saisir votre nouvelle description"
+                  value={formNote.description}
+                  readOnly={!noteEstModifiable}
+                  maxLength={500}
+                  onChange={(e) => setFormNote({ ...formNote, description: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* CELLULE 6+7 — Recherche */}
+            <div className="cell-span-2">
+              <div className="search-row">
+                <span className="search-label">Rechercher par :</span>
+                <select
+                  id="searchTypeSelect"
+                  className="search-type-select"
+                  value={typeRecherche}
+                  onChange={(e) => {
+                    setTypeRecherche(e.target.value as TypeRecherche);
+                    setTexteRecherche('');
+                  }}
+                >
+                  <option value="note">Note</option>
+                  <option value="categorie">Catégorie</option>
+                </select>
+
+                <ChampRecherche<Categorie | Note>
+                  id="searchInput"
+                  placeholder={
+                    typeRecherche === 'categorie'
+                      ? 'Rechercher une catégorie par numéro ou description...'
+                      : 'Rechercher une note par numéro ou description...'
+                  }
+                  valeur={texteRecherche}
+                  suggestions={
+                    typeRecherche === 'categorie'
+                      ? suggestionsCategorieRecherche
+                      : suggestionsNoteRecherche
+                  }
+                  cléSuggestion={(element) => String(element.id)}
+                  renduSuggestion={(element) => {
+                    if (typeRecherche === 'categorie') {
+                      const cat = element as Categorie;
+                      const nomProjet = projets.find((p) => p.id === cat.id_projet)?.nom ?? '';
+                      return (
+                        <>
+                          <strong>{cat.numero}</strong> — {cat.description}
+                          <br />
+                          <small>📁 {nomProjet}</small>
+                        </>
+                      );
+                    } else {
+                      const note = element as Note;
+                      const cat = categories.find((c) => c.id === note.id_categorie);
+                      const nomProjet = projets.find((p) => p.id === note.id_projet)?.nom ?? '';
+                      return (
+                        <>
+                          <strong>{note.numero}</strong> —{' '}
+                          {note.description.substring(0, 80)}
+                          {note.description.length > 80 ? '...' : ''}
+                          <br />
+                          <small>
+                            📁 {nomProjet} | 📋 {cat?.numero} — {cat?.description}
+                          </small>
+                        </>
+                      );
+                    }
+                  }}
+                  onChangement={(valeur) => {
+                    setTexteRecherche(valeur);
+                    if (!idProjetSelectionne && valeur.trim().length >= 2) {
+                      afficherNotification(
+                        'Veuillez d\'abord sélectionner un projet',
+                        'warning'
+                      );
+                    }
+                  }}
+                  onSelectionSuggestion={(element) => {
+                    if (typeRecherche === 'categorie') {
+                      selectionnerCategorie(element as Categorie);
+                    } else {
+                      selectionnerNote(element as Note);
+                    }
+                  }}
+                  onEffacer={() => {
+                    reinitialiserFormulaires();
+                    afficherNotification('Recherche effacée', 'info');
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* CELLULE 8+9+10 — Boutons d'action */}
+            <div className="cell-span-3">
+              <div className="button-group">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={importerProjet}
+                >
+                  Importer
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={!idProjetSelectionne}
+                  onClick={exporterProjet}
+                >
+                  Exporter
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleEnregistrer}
+                >
+                  Enregistrer
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleModifier}
+                >
+                  Modifier
+                </button>
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  disabled={!annulerEstActif}
+                  onClick={annuler}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="btn-delete"
+                  onClick={handleSupprimer}
+                >
+                  Supprimer
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* -------------------------------------------------- */}
+        {/* SECTION TABLEAU ARBORESCENT                         */}
+        {/* Clic simple → collapse/expand                       */}
+        {/* Double-clic sur catégorie/note → sélectionne        */}
+        {/* -------------------------------------------------- */}
+        <div className="section">
+          <table className="data-table" id="dataTable">
+            <thead>
+              <tr>
+                <th>N°</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {renduTableau()}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </>
+  );
+};
+
+export default Keynotes;

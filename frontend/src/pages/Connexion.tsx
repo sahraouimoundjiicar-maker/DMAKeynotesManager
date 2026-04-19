@@ -1,178 +1,471 @@
-import { useState } from 'react';
-import { authService } from '../api/api';
+// src/pages/Connexion.tsx
+
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../api/api';
 
-function Connexion() {
+// ============================================================
+// SECTION 1 — TYPES
+// ============================================================
+
+type TypeNotification = 'success' | 'error' | 'warning' | 'info';
+
+interface EtatErreurs {
+  nom: string;
+  prenom: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+const ERREURS_VIDES: EtatErreurs = {
+  nom: '',
+  prenom: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+};
+
+// ============================================================
+// SECTION 2 — SOUS-COMPOSANT : Notification
+// Utilise useEffect pour nettoyer le setTimeout proprement
+// et éviter les fuites mémoire si le composant est démonté.
+// ============================================================
+
+interface PropsNotification {
+  message: string;
+  type: TypeNotification;
+  onClose: () => void;
+}
+
+const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) => {
+  React.useEffect(() => {
+    const minuterie = setTimeout(onClose, 4000);
+    return () => clearTimeout(minuterie); // Nettoyage si démonté avant 4 secondes
+  }, [onClose]);
+
+  return <div className={`notification ${type}`}>{message}</div>;
+};
+
+// ============================================================
+// SECTION 3 — COMPOSANT PRINCIPAL
+// ============================================================
+
+const Connexion: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: '',
-    mot_de_passe: '',
-  });
-  const [erreur, setErreur] = useState('');
-  const [chargement, setChargement] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  // --- Mode du formulaire ---
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErreur('');
-    setChargement(true);
+  // --- Champs du formulaire ---
+  const [nom, setNom] = useState('');
+  const [prenom, setPrenom] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
+  // --- État de chargement ---
+  const [isLoading, setIsLoading] = useState(false);
+
+  // --- Erreurs de validation ---
+  const [errors, setErrors] = useState<EtatErreurs>(ERREURS_VIDES);
+
+  // --- Notification (clé unique pour forcer le re-montage à chaque nouvelle notification) ---
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: TypeNotification;
+    cle: number;
+  } | null>(null);
+
+  // ============================================================
+  // SECTION 4 — FONCTIONS UTILITAIRES
+  // ============================================================
+
+  function afficherNotification(message: string, type: TypeNotification) {
+    setNotification({ message, type, cle: Date.now() });
+  }
+
+  function effacerErreurs() {
+    setErrors(ERREURS_VIDES);
+  }
+
+  function validerEmail(adresseEmail: string): boolean {
+    const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regexEmail.test(adresseEmail);
+  }
+
+  // ============================================================
+  // SECTION 5 — BASCULEMENT CONNEXION ↔ INSCRIPTION
+  // Réinitialise tous les champs et toutes les erreurs
+  // pour éviter un état incohérent entre les deux modes.
+  // ============================================================
+
+  function basculerMode() {
+    setIsRegisterMode((prev) => !prev);
+    effacerErreurs();
+    // Réinitialise tous les champs — pas seulement ceux spécifiques à l'inscription
+    setNom('');
+    setPrenom('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+  }
+
+  // ============================================================
+  // SECTION 6 — VALIDATION
+  // ============================================================
+
+  function validerInscription(): boolean {
+    const nouvErreurs: EtatErreurs = { ...ERREURS_VIDES };
+    let estValide = true;
+
+    if (!nom.trim()) {
+      nouvErreurs.nom = 'Le nom est obligatoire';
+      estValide = false;
+    } else if (nom.trim().length < 2) {
+      nouvErreurs.nom = 'Le nom doit contenir au moins 2 caractères';
+      estValide = false;
+    }
+
+    if (!prenom.trim()) {
+      nouvErreurs.prenom = 'Le prénom est obligatoire';
+      estValide = false;
+    } else if (prenom.trim().length < 2) {
+      nouvErreurs.prenom = 'Le prénom doit contenir au moins 2 caractères';
+      estValide = false;
+    }
+
+    if (!email.trim()) {
+      nouvErreurs.email = "L'email est obligatoire";
+      estValide = false;
+    } else if (!validerEmail(email.trim())) {
+      nouvErreurs.email = 'Email invalide (ex: nom@domaine.com)';
+      estValide = false;
+    }
+
+    if (!password) {
+      nouvErreurs.password = 'Le mot de passe est obligatoire';
+      estValide = false;
+    } else if (password.length < 8) {
+      nouvErreurs.password = 'Le mot de passe doit contenir au moins 8 caractères';
+      estValide = false;
+    }
+
+    if (!confirmPassword) {
+      nouvErreurs.confirmPassword = 'Veuillez confirmer votre mot de passe';
+      estValide = false;
+    } else if (password !== confirmPassword) {
+      nouvErreurs.confirmPassword = 'Les mots de passe ne correspondent pas';
+      estValide = false;
+    }
+
+    setErrors(nouvErreurs);
+    return estValide;
+  }
+
+  function validerConnexion(): boolean {
+    const nouvErreurs: EtatErreurs = { ...ERREURS_VIDES };
+    let estValide = true;
+
+    if (!email.trim()) {
+      nouvErreurs.email = "L'email est obligatoire";
+      estValide = false;
+    } else if (!validerEmail(email.trim())) {
+      nouvErreurs.email = 'Email invalide (ex: nom@domaine.com)';
+      estValide = false;
+    }
+
+    if (!password) {
+      nouvErreurs.password = 'Le mot de passe est obligatoire';
+      estValide = false;
+    }
+
+    setErrors(nouvErreurs);
+    return estValide;
+  }
+
+  // ============================================================
+  // SECTION 7 — EXTRACTION DU MESSAGE D'ERREUR API
+  // Centralisé pour éviter la duplication dans handleLogin/handleRegister.
+  // ============================================================
+
+  function extraireMessageErreurApi(erreur: any, messageParDefaut: string): string {
+    if (erreur?.response?.data) {
+      if (typeof erreur.response.data === 'string') return erreur.response.data;
+      if (erreur.response.data.detail) return erreur.response.data.detail;
+      if (erreur.response.data.message) return erreur.response.data.message;
+    }
+    return messageParDefaut;
+  }
+
+  // ============================================================
+  // SECTION 8 — CONNEXION
+  // ============================================================
+
+  async function handleLogin() {
+    if (!validerConnexion()) return;
+
+    setIsLoading(true);
     try {
-      const response = await authService.connexion(formData);
-      console.log('✅ Connexion réussie:', response.data);
+      const reponse = await authService.connexion({
+        email: email.trim(),
+        mot_de_passe: password,
+      });
 
-      // Stocker le token JWT
-      if (response.data.access_token) {
-        localStorage.setItem('token', response.data.access_token);
-        console.log('🔐 Token stocké');
+      if (reponse.data?.access_token) {
+        localStorage.setItem('token', reponse.data.access_token);
+        localStorage.setItem('user_role', reponse.data.role || 'utilisateur');
+        localStorage.setItem('user_email', email.trim());
+
+        afficherNotification('Connexion réussie ! Bienvenue', 'success');
+
+        // Délai court pour que l'utilisateur voie la notification avant la redirection
+        setTimeout(() => navigate('/utilisateurs'), 1500);
+      } else {
+        afficherNotification('Réponse du serveur invalide', 'error');
       }
 
-      // Construire et stocker les informations utilisateur
-      // Le backend retourne: { access_token, token_type, role }
-      const userData = {
-        email: formData.email,
-        role: response.data.role || 'utilisateur',
-        // Nom temporaire à partir de l'email (avant le @)
-        nom: formData.email.split('@')[0],
-        prenom: '',
-      };
+    } catch (erreur: any) {
+      console.error('Erreur connexion:', erreur);
 
-      localStorage.setItem('user', JSON.stringify(userData));
-      console.log('👤 Utilisateur stocké:', userData);
+      const messageErreur = extraireMessageErreurApi(
+        erreur,
+        'Erreur de connexion. Veuillez réessayer.'
+      );
 
-      // Rediriger vers le dashboard
-      navigate('/dashboard');
-    } catch (error: any) {
-      console.error('❌ Erreur de connexion:', error);
-      const messageErreur = error.response?.data?.detail ||
-                            error.response?.data?.message ||
-                            'Email ou mot de passe incorrect';
-      setErreur(`❌ ${messageErreur}`);
+      // Affiche en "warning" si le compte est en attente d'approbation
+      const typeErreur: TypeNotification =
+        messageErreur.toLowerCase().includes('attente') ||
+        messageErreur.toLowerCase().includes('approbation')
+          ? 'warning'
+          : 'error';
+
+      afficherNotification(messageErreur, typeErreur);
     } finally {
-      setChargement(false);
+      setIsLoading(false);
     }
-  };
+  }
 
-  const styles = {
-    container: {
-      maxWidth: '400px',
-      margin: '50px auto',
-      padding: '20px',
-      border: '1px solid #ddd',
-      borderRadius: '8px',
-      fontFamily: 'Arial, sans-serif',
-    },
-    title: {
-      textAlign: 'center' as const,
-      marginBottom: '20px',
-    },
-    formGroup: {
-      marginBottom: '15px',
-    },
-    label: {
-      display: 'block',
-      marginBottom: '5px',
-      fontWeight: 'bold' as const,
-    },
-    input: {
-      width: '100%',
-      padding: '8px',
-      border: '1px solid #ccc',
-      borderRadius: '4px',
-      fontSize: '16px',
-    },
-    button: {
-      width: '100%',
-      padding: '10px',
-      backgroundColor: '#28a745',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      fontSize: '16px',
-      cursor: 'pointer',
-    },
-    buttonDisabled: {
-      backgroundColor: '#ccc',
-      cursor: 'not-allowed',
-    },
-    error: {
-      marginTop: '15px',
-      padding: '10px',
-      borderRadius: '4px',
-      textAlign: 'center' as const,
-      backgroundColor: '#f8d7da',
-      color: '#721c24',
-      border: '1px solid #f5c6cb',
-    },
-    link: {
-      textAlign: 'center' as const,
-      marginTop: '15px',
-    },
-    linkText: {
-      color: '#007bff',
-      textDecoration: 'none',
-    },
-  };
+  // ============================================================
+  // SECTION 9 — INSCRIPTION
+  // ============================================================
+
+  async function handleRegister() {
+    if (!validerInscription()) return;
+
+    setIsLoading(true);
+    try {
+      await authService.inscription({
+        nom: nom.trim(),
+        prenom: prenom.trim(),
+        email: email.trim(),
+        mot_de_passe: password,
+        confirmer_mot_de_passe: confirmPassword,
+      });
+
+      // Une seule notification — claire et suffisante
+      afficherNotification(
+        "Inscription réussie ! Votre compte est en attente d'approbation par l'administrateur.",
+        'success'
+      );
+
+      // Réinitialise le formulaire et repasse en mode connexion après 2 secondes
+      setTimeout(() => {
+        setIsRegisterMode(false);
+        setNom('');
+        setPrenom('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        effacerErreurs();
+      }, 2000);
+
+    } catch (erreur: any) {
+      console.error('Erreur inscription:', erreur);
+      const messageErreur = extraireMessageErreurApi(
+        erreur,
+        "Erreur lors de l'inscription. Veuillez réessayer."
+      );
+      afficherNotification(messageErreur, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // ============================================================
+  // SECTION 10 — SOUMISSION DU FORMULAIRE
+  // ============================================================
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (isRegisterMode) {
+      handleRegister();
+    } else {
+      handleLogin();
+    }
+  }
+
+  // ============================================================
+  // SECTION 11 — RENDU (JSX)
+  // ============================================================
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Connexion</h2>
-      <form onSubmit={handleSubmit}>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Email :</label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            style={styles.input}
-          />
-        </div>
+    <div className="container-login">
 
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Mot de passe :</label>
-          <input
-            type="password"
-            name="mot_de_passe"
-            value={formData.mot_de_passe}
-            onChange={handleChange}
-            required
-            style={styles.input}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={chargement}
-          style={{
-            ...styles.button,
-            ...(chargement ? styles.buttonDisabled : {}),
-          }}
-        >
-          {chargement ? 'Connexion en cours...' : 'Se connecter'}
-        </button>
-      </form>
-
-      {erreur && (
-        <div style={styles.error}>
-          {erreur}
-        </div>
+      {/* Notification flottante — re-montée à chaque nouvelle via la clé */}
+      {notification && (
+        <Notification
+          key={notification.cle}
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
       )}
 
-      <div style={styles.link}>
-        <a href="/inscription" style={styles.linkText}>
-          Pas encore de compte ? S'inscrire
-        </a>
+      <div className="section">
+        <div className="section-header">
+          <h2>{isRegisterMode ? 'Inscription' : 'Connexion'}</h2>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="grid-1x1">
+            <div className="cell">
+
+              {/* Champs Nom + Prénom — visibles uniquement en mode inscription */}
+              <div
+                className={`register-fields register-fields-top ${isRegisterMode ? 'expanded' : ''}`}
+              >
+                <div>
+                  <div className="form-group">
+                    <label className="cell-title">
+                      Nom <span style={{ color: '#dc3545' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className={`form-input ${errors.nom ? 'error' : ''}`}
+                      placeholder="Dupont"
+                      value={nom}
+                      onChange={(e) => setNom(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    {errors.nom && (
+                      <span className="error-message">{errors.nom}</span>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label className="cell-title">
+                      Prénom <span style={{ color: '#dc3545' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className={`form-input ${errors.prenom ? 'error' : ''}`}
+                      placeholder="Jean"
+                      value={prenom}
+                      onChange={(e) => setPrenom(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    {errors.prenom && (
+                      <span className="error-message">{errors.prenom}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Email — toujours visible */}
+              <div className="form-group form-group-email">
+                <label className="cell-title">
+                  Email <span style={{ color: '#dc3545' }}>*</span>
+                </label>
+                <input
+                  type="email"
+                  className={`form-input ${errors.email ? 'error' : ''}`}
+                  placeholder="jean.dupont@dma.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                />
+                {errors.email && (
+                  <span className="error-message">{errors.email}</span>
+                )}
+              </div>
+
+              {/* Mot de passe — toujours visible */}
+              <div className="form-group form-group-password">
+                <label className="cell-title">
+                  Mot de passe <span style={{ color: '#dc3545' }}>*</span>
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  className={`form-input ${errors.password ? 'error' : ''}`}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                />
+                {errors.password && (
+                  <span className="error-message">{errors.password}</span>
+                )}
+              </div>
+
+              {/* Confirmation mot de passe — visible uniquement en mode inscription */}
+              <div
+                className={`register-fields register-fields-bottom ${isRegisterMode ? 'expanded' : ''}`}
+              >
+                <div>
+                  <div className="form-group">
+                    <label className="cell-title">
+                      Confirmer le mot de passe{' '}
+                      <span style={{ color: '#dc3545' }}>*</span>
+                    </label>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    {errors.confirmPassword && (
+                      <span className="error-message">{errors.confirmPassword}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bouton de soumission */}
+              <div className="button-group">
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isLoading}
+                >
+                  {isLoading
+                    ? 'Chargement...'
+                    : isRegisterMode
+                    ? "S'inscrire"
+                    : 'Se connecter'}
+                </button>
+              </div>
+
+              {/* Lien pour basculer entre connexion et inscription */}
+              <div className="switch-mode">
+                <span>
+                  {isRegisterMode ? 'Déjà un compte ? ' : 'Nouveau ? '}
+                </span>
+                <span className="switch-link" onClick={basculerMode}>
+                  {isRegisterMode ? 'Se connecter' : 'Enregistrez-vous'}
+                </span>
+              </div>
+
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   );
-}
+};
 
 export default Connexion;
