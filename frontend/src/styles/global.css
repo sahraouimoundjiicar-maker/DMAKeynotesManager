@@ -940,6 +940,11 @@ h2 {
     font-weight: 500;
 }
 
+.data-table td.description-cell {
+    text-align: left;
+    padding-left: 8px;
+}
+
 .data-table tbody tr:hover td {
     background-color: #f0f2f5;
     cursor: pointer;
