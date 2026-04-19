@@ -40,11 +40,21 @@ interface PropsNotification {
 
 const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) => {
   React.useEffect(() => {
-    const minuterie = setTimeout(onClose, 6000);
-    return () => clearTimeout(minuterie); // Nettoyage si démonté avant 6 secondes
+    const minuterie = setTimeout(onClose, 10000);
+    return () => clearTimeout(minuterie);
   }, [onClose]);
 
-  return <div className={`notification ${type}`}>{message}</div>;
+  return (
+    <div className={`notification ${type}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+      <span>{message}</span>
+      <button
+        onClick={onClose}
+        style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '16px', padding: '0', lineHeight: 1 }}
+      >
+        ✖
+      </button>
+    </div>
+  );
 };
 
 // ============================================================
