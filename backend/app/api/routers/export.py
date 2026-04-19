@@ -239,4 +239,4 @@ def _construire_nom_fichier(nom_projet: str) -> str:
         c for c in nom_nettoye
         if c.isalnum() or c == "_"
     )
-    return f"keynotes_{nom_nettoye}{EXTENSION_FICHIER_KEYNOTES}"
+    return f"{nom_nettoye}-Keynotes{EXTENSION_FICHIER_KEYNOTES}"
