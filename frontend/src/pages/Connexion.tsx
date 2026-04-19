@@ -221,93 +221,88 @@ const Connexion: React.FC = () => {
   // ============================================================
 
   async function handleLogin() {
-    console.log('🔐 handleLogin - Début');
-    console.log('Email:', email.trim());
+  console.log('🔐 handleLogin - Début');
 
-    if (!validerConnexion()) {
-      console.log('❌ Validation locale échouée');
-      return;
-    }
+  if (!validerConnexion()) return;
 
-    setIsLoading(true);
-    console.log('⏳ isLoading = true');
+  setIsLoading(true);
 
-    try {
-      console.log('📡 Appel API authService.connexion...');
-      const reponse = await authService.connexion({
-        email: email.trim(),
-        mot_de_passe: password,
-      });
+  try {
+    const reponse = await authService.connexion({
+      email: email.trim(),
+      mot_de_passe: password,
+    });
 
-      console.log('📥 Réponse API reçue:', reponse);
-      console.log('📥 reponse.data:', reponse.data);
-      console.log('📥 reponse.data?.access_token:', reponse.data?.access_token);
-
-      if (reponse.data?.access_token) {
-        console.log('✅ Token reçu - Connexion réussie');
-
-        localStorage.setItem('token', reponse.data.access_token);
-        localStorage.setItem('user_role', reponse.data.role || 'utilisateur');
-        localStorage.setItem('user_email', email.trim());
-
-        setIsLoading(false);
-        console.log('⏳ isLoading = false (succès)');
-
-        afficherNotification('Connexion réussie ! Bienvenue', 'success');
-
-        const role = reponse.data.role || 'utilisateur';
-        console.log(`👤 Rôle détecté: ${role}, redirection dans 1.5s`);
-
-        setTimeout(() => {
-          if (role === 'super_admin') {
-            console.log('🚀 Redirection vers /utilisateurs');
-            navigate('/utilisateurs');
-          } else {
-            console.log('🚀 Redirection vers /keynotes');
-            navigate('/keynotes');
-          }
-        }, 1500);
-      } else {
-        console.log('⚠️ Pas de token dans la réponse');
-        setIsLoading(false);
-        afficherNotification('Réponse du serveur invalide. Veuillez réessayer.', 'error');
-      }
-
-    } catch (erreur: any) {
-      console.log('=== 🔴 DÉBUT CATCH ERREUR ===');
-      console.log('Erreur complète:', erreur);
-      console.log('Type de erreur:', typeof erreur);
-      console.log('erreur?.response:', erreur?.response);
-      console.log('erreur?.response?.status:', erreur?.response?.status);
-      console.log('erreur?.response?.data:', erreur?.response?.data);
-      console.log('erreur?.response?.data?.detail:', erreur?.response?.data?.detail);
-      console.log('erreur?.message:', erreur?.message);
-      console.log('=== 🔴 FIN CATCH ERREUR ===');
+    if (reponse.data?.access_token) {
+      localStorage.setItem('token', reponse.data.access_token);
+      localStorage.setItem('user_role', reponse.data.role || 'utilisateur');
+      localStorage.setItem('user_email', email.trim());
 
       setIsLoading(false);
-      console.log('⏳ isLoading = false (erreur)');
+      afficherNotification('Connexion réussie ! Bienvenue', 'success');
 
-      const codeHttp = erreur?.response?.status;
-      console.log(`📊 Code HTTP détecté: ${codeHttp}`);
+      const role = reponse.data.role || 'utilisateur';
+      setTimeout(() => {
+        if (role === 'super_admin') {
+          navigate('/utilisateurs');
+        } else {
+          navigate('/keynotes');
+        }
+      }, 1500);
+    } else {
+      setIsLoading(false);
+      afficherNotification('Réponse du serveur invalide', 'error');
+    }
 
-      if (codeHttp === 403) {
-        console.log('✅ CAS 403 DÉTECTÉ - Compte en attente');
-        console.log('📢 Affichage notification WARNING (jaune)');
-        afficherNotification(
-          "Compte en attente d'approbation. Veuillez patienter jusqu'à validation par l'administrateur.",
-          'warning'
-        );
-      } else if (codeHttp === 401) {
-        console.log('✅ CAS 401 DÉTECTÉ - Identifiants incorrects');
-        console.log('📢 Affichage notification ERROR (rouge)');
-        afficherNotification('Email ou mot de passe incorrect. Veuillez réessayer.', 'error');
-      } else {
-        console.log(`⚠️ AUTRE CODE HTTP: ${codeHttp} - Erreur inconnue`);
-        console.log('📢 Affichage notification ERROR générique');
-        afficherNotification('Erreur de connexion. Veuillez réessayer.', 'error');
-      }
+  } catch (erreur: any) {
+    console.log('=== DÉTAIL COMPLET DE L ERREUR ===');
+    console.log('Erreur:', erreur);
+    console.log('Status (erreur.response?.status):', erreur.response?.status);
+    console.log('Status (erreur.status):', erreur.status);
+    console.log('Données (erreur.response?.data):', erreur.response?.data);
+    console.log('Données (erreur.data):', erreur.data);
+    console.log('Message:', erreur.message);
+    console.log('=== FIN DÉTAIL ===');
+
+    setIsLoading(false);
+
+    // ESSAYONS PLUSIEURS FAÇONS DE DÉTECTER LE CODE 403
+    const codeHttp = erreur?.response?.status || erreur?.status;
+    const message = erreur?.response?.data?.detail || erreur?.response?.data || erreur?.message || '';
+    const messageLower = message.toString().toLowerCase();
+
+    console.log('Code HTTP détecté (méthode alternative):', codeHttp);
+    console.log('Message détecté:', message);
+    console.log('Message en minuscules:', messageLower);
+
+    // DÉTECTION PAR CODE HTTP
+    if (codeHttp === 403) {
+      console.log('🔥 DÉTECTION 403 - Notification warning');
+      afficherNotification(
+        "Compte en attente d'approbation. Veuillez patienter.",
+        'warning'
+      );
+    }
+    // DÉTECTION PAR MESSAGE (secours)
+    else if (messageLower.includes('attente') || messageLower.includes('approbation')) {
+      console.log('🔥 DÉTECTION PAR MESSAGE - Notification warning');
+      afficherNotification(
+        "Compte en attente d'approbation. Veuillez patienter.",
+        'warning'
+      );
+    }
+    // DÉTECTION 401
+    else if (codeHttp === 401) {
+      console.log('🔥 DÉTECTION 401 - Notification error');
+      afficherNotification('Email ou mot de passe incorrect', 'error');
+    }
+    // AUTRE
+    else {
+      console.log('🔥 CAS PAR DÉFAUT - Notification error');
+      afficherNotification('Erreur de connexion. Veuillez réessayer.', 'error');
     }
   }
+}
 
   // ============================================================
   // SECTION 9 — INSCRIPTION
