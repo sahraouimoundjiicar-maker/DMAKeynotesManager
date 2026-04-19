@@ -88,12 +88,29 @@ interface PropsNotification {
 }
 
 const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) => {
+  // Fermeture automatique uniquement pour success et info (5 secondes)
+  // error et warning restent jusqu'au clic sur ✖
   useEffect(() => {
-    const minuterie = setTimeout(onClose, 3000);
-    return () => clearTimeout(minuterie);
-  }, [onClose]);
+    if (type === 'success' || type === 'info') {
+      const minuterie = setTimeout(onClose, 5000);
+      return () => clearTimeout(minuterie);
+    }
+  }, [type, onClose]);
 
-  return <div className={`notification ${type}`}>{message}</div>;
+  return (
+    <div className={`notification ${type}`}>
+      <span>{message}</span>
+      {(type === 'error' || type === 'warning') && (
+        <button
+          onClick={onClose}
+          aria-label="Fermer"
+          className="notification-close"
+        >
+          ✖
+        </button>
+      )}
+    </div>
+  );
 };
 
 // ============================================================
@@ -282,8 +299,9 @@ const Projets: React.FC = () => {
   const exportImportEstActif = projetSelectionne !== null;
 
   // Détermine si la zone d'ajout d'utilisateur est active
-  // Réservé au super_admin — le backend rejette les appels accesService si non super_admin
-  const ajoutUtilisateurEstActif = estSuperAdmin && (modeFormulaire === 'creation' || modeFormulaire === 'edition');
+  // La page Projets est accessible uniquement au super_admin
+  // donc pas besoin de vérifier le rôle ici — le backend le vérifie de toute façon
+  const ajoutUtilisateurEstActif = modeFormulaire === 'creation' || modeFormulaire === 'edition';
 
   // ============================================================
   // SECTION 7 — NOTIFICATIONS
@@ -484,17 +502,15 @@ const Projets: React.FC = () => {
         const nouveauProjet: Projet = reponseCreation.data;
 
         // Étape 2 — Attribue les accès aux utilisateurs sélectionnés
-        // Note : accesService est réservé au super_admin (backend vérifie le token)
-        if (estSuperAdmin) {
-          for (const utilisateur of utilisateursAcces) {
-            try {
-              await accesService.attribuer(nouveauProjet.id, { id_utilisateur: utilisateur.id });
-            } catch (erreurAcces) {
-              console.warn(
-                `Accès non attribué pour ${utilisateur.prenom} ${utilisateur.nom}:`,
-                erreurAcces
-              );
-            }
+        // La page est réservée au super_admin — pas de vérification de rôle nécessaire ici
+        for (const utilisateur of utilisateursAcces) {
+          try {
+            await accesService.attribuer(nouveauProjet.id, { id_utilisateur: utilisateur.id });
+          } catch (erreurAcces) {
+            console.warn(
+              `Accès non attribué pour ${utilisateur.prenom} ${utilisateur.nom}:`,
+              erreurAcces
+            );
           }
         }
 
@@ -530,30 +546,30 @@ const Projets: React.FC = () => {
         const idsActuels = new Set(utilisateursActuels.map((u) => u.id_utilisateur));
         const idsVoulus = new Set(utilisateursAcces.map((u) => u.id));
 
-        // Synchronise les accès — réservé au super_admin (backend vérifie le token)
-        if (estSuperAdmin) {
-          // Retire les utilisateurs qui ne sont plus dans la liste
-          for (const idActuel of idsActuels) {
-            if (!idsVoulus.has(idActuel)) {
-              try {
-                await accesService.retirer(projetSelectionne.id, idActuel);
-              } catch (erreurRetrait) {
-                console.warn(`Impossible de retirer l'accès pour id=${idActuel}:`, erreurRetrait);
-              }
+        // Synchronise les accès — retire les accès supprimés et ajoute les nouveaux
+        // La page est réservée au super_admin — pas de vérification de rôle nécessaire ici
+
+        // Retire les utilisateurs qui ne sont plus dans la liste
+        for (const idActuel of idsActuels) {
+          if (!idsVoulus.has(idActuel)) {
+            try {
+              await accesService.retirer(projetSelectionne.id, idActuel);
+            } catch (erreurRetrait) {
+              console.warn(`Impossible de retirer l'accès pour id=${idActuel}:`, erreurRetrait);
             }
           }
+        }
 
-          // Ajoute les nouveaux utilisateurs
-          for (const utilisateur of utilisateursAcces) {
-            if (!idsActuels.has(utilisateur.id)) {
-              try {
-                await accesService.attribuer(projetSelectionne.id, { id_utilisateur: utilisateur.id });
-              } catch (erreurAjout) {
-                console.warn(
-                  `Impossible d'ajouter l'accès pour ${utilisateur.prenom} ${utilisateur.nom}:`,
-                  erreurAjout
-                );
-              }
+        // Ajoute les nouveaux utilisateurs
+        for (const utilisateur of utilisateursAcces) {
+          if (!idsActuels.has(utilisateur.id)) {
+            try {
+              await accesService.attribuer(projetSelectionne.id, { id_utilisateur: utilisateur.id });
+            } catch (erreurAjout) {
+              console.warn(
+                `Impossible d'ajouter l'accès pour ${utilisateur.prenom} ${utilisateur.nom}:`,
+                erreurAjout
+              );
             }
           }
         }
@@ -710,7 +726,7 @@ const Projets: React.FC = () => {
 
             {/* CELLULE 1 — Nom du projet */}
             <div className="cell-form">
-              <label className="form-label required" htmlFor="champ-nom-projet">
+              <label className="cell-title" htmlFor="champ-nom-projet">
                 Nom du projet
               </label>
               <input
@@ -726,7 +742,7 @@ const Projets: React.FC = () => {
 
             {/* CELLULE 2 — Chercher utilisateur à ajouter */}
             <div className="cell-form">
-              <label className="form-label" htmlFor="recherche-utilisateur-projet">
+              <label className="cell-title" htmlFor="recherche-utilisateur-projet">
                 Chercher utilisateur
               </label>
               <ChampRecherche<UtilisateurAPI>
