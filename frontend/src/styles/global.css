@@ -424,6 +424,15 @@ h2 {
     cursor: not-allowed;
 }
 
+/* Message d'erreur de validation sous les champs */
+.error-message {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #dc3545;
+}
+
 .form-select {
     width: 100%;
     padding: 10px 12px;

@@ -391,7 +391,7 @@ const Connexion: React.FC = () => {
                 </label>
                 <input
                   type="password"
-                  autoComplete="new-password"
+                  autoComplete={isRegisterMode ? 'new-password' : 'current-password'}
                   className={`form-input ${errors.password ? 'error' : ''}`}
                   placeholder="••••••••"
                   value={password}
