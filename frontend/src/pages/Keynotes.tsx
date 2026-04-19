@@ -258,9 +258,6 @@ const Keynotes: React.FC = () => {
   // SECTION 6 — DONNÉES DÉRIVÉES
   // ============================================================
 
-  // Projet actuellement sélectionné (objet complet)
-  const projetSelectionne = projets.find((p) => p.id === idProjetSelectionne) ?? null;
-
   // Catégories du projet sélectionné, triées numériquement
   const categoriesProjetActuel = idProjetSelectionne
     ? trierParNumero(categories.filter((c) => c.id_projet === idProjetSelectionne))

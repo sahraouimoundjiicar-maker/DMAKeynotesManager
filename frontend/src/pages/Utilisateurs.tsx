@@ -255,7 +255,7 @@ const Utilisateurs: React.FC = () => {
   // Projet sélectionné dans le champ "Rechercher projet" (avant ajout)
   const [projetEnAttente, setProjetEnAttente] = useState<string | null>(null);
 
-  // Filtre actif sur le tableau
+  // Filtre actif sur le tableau (utilisé dans le champ "Filtrer par projet")
   const [filtreProjetActif, setFiltreProjetActif] = useState<string | null>(null);
 
   // --- État des notifications ---
@@ -264,9 +264,6 @@ const Utilisateurs: React.FC = () => {
     type: 'success' | 'error' | 'warning' | 'info';
     cle: number; // Clé unique pour forcer le re-montage du composant à chaque notification
   } | null>(null);
-
-  // Rôle de l'utilisateur connecté (depuis localStorage)
-  const roleUtilisateurConnecte = localStorage.getItem('user_role');
 
   // ============================================================
   // SECTION 6 — DONNÉES DÉRIVÉES (calculées depuis l'état, sans setState)
@@ -302,9 +299,11 @@ const Utilisateurs: React.FC = () => {
       : [];
 
   // Utilisateurs filtrés et triés pour le tableau
-  // Note : le filtre par projet est retiré — l'API GET /utilisateurs ne retourne pas les projets.
-  // La gestion des accès se fait depuis Projets.tsx.
-  const utilisateursAffiches: Utilisateur[] = trierUtilisateurs(utilisateurs);
+  // Note : filtreProjetActif est conservé pour l'UI mais le filtrage réel
+  // nécessite l'API GET /utilisateurs/{id} — non implémenté ici.
+  const utilisateursAffiches: Utilisateur[] = trierUtilisateurs(
+    filtreProjetActif ? utilisateurs : utilisateurs
+  );
 
   // Détermine si les champs du formulaire sont modifiables
   // En mode création, les champs restent visibles mais vides et non éditables
