@@ -98,6 +98,7 @@ def creer_projet(
         return service_projets.creer_projet(
             nom_projet     = donnees.nom_projet,
             id_super_admin = admin["id"],
+            chemin_export  = donnees.chemin_export,
         )
     except ValueError as erreur:
         raise HTTPException(
@@ -261,7 +262,7 @@ def rechercher_keynotes(
 @router.put(
     "/{id_projet}",
     response_model=ProjetReponseModele,
-    summary="Renommer un projet",
+    summary="Modifier un projet",
 )
 def modifier_projet(
     id_projet: int,
@@ -269,15 +270,16 @@ def modifier_projet(
     admin    : dict = Depends(verifier_super_admin),
 ) -> dict:
     """
-    Renomme un projet existant.
-    Le fichier .txt associé est aussi renommé si présent.
+    Modifie un projet existant — nom et/ou chemin d'export.
+    Le fichier .txt associé est renommé si le nom change.
     Réservé au super_admin uniquement.
     """
-    # Étape 4.1 — Renommer le projet
+    # Étape 4.1 — Modifier le projet
     try:
         return service_projets.modifier_projet(
-            id_projet   = id_projet,
-            nouveau_nom = donnees.nouveau_nom,
+            id_projet     = id_projet,
+            nouveau_nom   = donnees.nouveau_nom,
+            chemin_export = donnees.chemin_export,
         )
     except ValueError as erreur:
         raise HTTPException(

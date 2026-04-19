@@ -38,6 +38,7 @@ logger = get_logger(__name__)
 def creer_projet(
     nom_projet    : str,
     id_super_admin: int,
+    chemin_export : str | None = None,
 ) -> dict:
     """
     Crée un nouveau projet Revit vide.
@@ -46,6 +47,7 @@ def creer_projet(
     Args:
         nom_projet    : Nom du projet Revit
         id_super_admin: ID du super_admin créateur
+        chemin_export : Chemin d'export du fichier .txt (optionnel)
 
     Returns:
         Dictionnaire avec les infos du projet créé
@@ -71,6 +73,7 @@ def creer_projet(
             connexion,
             nom_projet.strip(),
             id_super_admin,
+            chemin_export,
         )
 
     except ValueError:
@@ -192,16 +195,18 @@ def lister_projets_utilisateur(
 # ─────────────────────────────────────────────────────────────
 
 def modifier_projet(
-    id_projet  : int,
-    nouveau_nom: str,
+    id_projet     : int,
+    nouveau_nom   : str | None = None,
+    chemin_export : str | None = None,
 ) -> dict:
     """
-    Renomme un projet existant.
-    Renomme aussi le fichier .txt associé si il existe.
+    Modifie un projet existant — nom et/ou chemin d'export.
+    Renomme aussi le fichier .txt si le nom change.
 
     Args:
-        id_projet  : ID du projet à renommer
-        nouveau_nom: Nouveau nom du projet
+        id_projet    : ID du projet à modifier
+        nouveau_nom  : Nouveau nom du projet (optionnel)
+        chemin_export: Nouveau chemin d'export (optionnel)
 
     Returns:
         Dictionnaire avec les infos mises à jour
@@ -223,49 +228,48 @@ def modifier_projet(
             )
 
         # Étape 3.2 — Vérifier l'unicité du nouveau nom
-        nouveau_nom_nettoye = nouveau_nom.strip()
-        projet_existant = repo_projets.obtenir_projet_par_nom(
-            connexion, nouveau_nom_nettoye
-        )
-        if projet_existant and (
-            projet_existant["id"] != id_projet
-        ):
-            raise ValueError(
-                f"Un projet nommé '{nouveau_nom_nettoye}' "
-                "existe déjà."
+        if nouveau_nom:
+            nouveau_nom_nettoye = nouveau_nom.strip()
+            projet_existant = repo_projets.obtenir_projet_par_nom(
+                connexion, nouveau_nom_nettoye
             )
+            if projet_existant and (
+                projet_existant["id"] != id_projet
+            ):
+                raise ValueError(
+                    f"Un projet nommé '{nouveau_nom_nettoye}' "
+                    "existe déjà."
+                )
 
-        # Étape 3.3 — Renommer le fichier .txt si présent
-        """
-        Si un fichier .txt existe pour ce projet,
-        on le renomme pour rester cohérent avec le
-        nouveau nom du projet.
-        """
-        ancien_nom_fichier = _construire_nom_fichier(
-            projet["nom"]
-        )
-        nouveau_nom_fichier = _construire_nom_fichier(
-            nouveau_nom_nettoye
-        )
-
-        ancien_chemin = os.path.join(
-            CHEMIN_DOSSIER_KEYNOTES, ancien_nom_fichier
-        )
-        nouveau_chemin = os.path.join(
-            CHEMIN_DOSSIER_KEYNOTES, nouveau_nom_fichier
-        )
-
-        if os.path.exists(ancien_chemin):
-            os.rename(ancien_chemin, nouveau_chemin)
-            logger.info(
-                f"Fichier .txt renommé : "
-                f"{ancien_nom_fichier} → "
-                f"{nouveau_nom_fichier}"
+            # Étape 3.3 — Renommer le fichier .txt si présent
+            ancien_nom_fichier = _construire_nom_fichier(
+                projet["nom"]
             )
+            nouveau_nom_fichier = _construire_nom_fichier(
+                nouveau_nom_nettoye
+            )
+            ancien_chemin = os.path.join(
+                CHEMIN_DOSSIER_KEYNOTES, ancien_nom_fichier
+            )
+            nouveau_chemin = os.path.join(
+                CHEMIN_DOSSIER_KEYNOTES, nouveau_nom_fichier
+            )
+            if os.path.exists(ancien_chemin):
+                os.rename(ancien_chemin, nouveau_chemin)
+                logger.info(
+                    f"Fichier .txt renommé : "
+                    f"{ancien_nom_fichier} → "
+                    f"{nouveau_nom_fichier}"
+                )
+        else:
+            nouveau_nom_nettoye = None
 
-        # Étape 3.4 — Renommer le projet en BD
-        return repo_projets.mettre_a_jour_nom_projet(
-            connexion, id_projet, nouveau_nom_nettoye
+        # Étape 3.4 — Mettre à jour le projet en BD
+        return repo_projets.mettre_a_jour_projet(
+            connexion,
+            id_projet,
+            nouveau_nom   = nouveau_nom_nettoye,
+            chemin_export = chemin_export,
         )
 
     except ValueError:
@@ -287,7 +291,6 @@ def supprimer_projet(id_projet: int) -> bool:
     """
     Supprime un projet et toutes ses données.
     Supprime aussi le fichier .txt associé si présent.
-    Action irréversible — réservée au super_admin.
 
     Args:
         id_projet: ID du projet à supprimer
@@ -311,11 +314,6 @@ def supprimer_projet(id_projet: int) -> bool:
             )
 
         # Étape 4.2 — Supprimer le fichier .txt si présent
-        """
-        On supprime le fichier avant la BD pour éviter
-        d'avoir un fichier orphelin si la suppression BD
-        échoue.
-        """
         nom_fichier = _construire_nom_fichier(projet["nom"])
         chemin_fichier = os.path.join(
             CHEMIN_DOSSIER_KEYNOTES, nom_fichier
@@ -327,10 +325,6 @@ def supprimer_projet(id_projet: int) -> bool:
             )
 
         # Étape 4.3 — Supprimer le projet en BD
-        """
-        ON DELETE CASCADE supprime automatiquement :
-        acces_projet, categories, notes, historique.
-        """
         return repo_projets.supprimer_projet(
             connexion, id_projet
         )
@@ -362,11 +356,6 @@ def _construire_nom_fichier(nom_projet: str) -> str:
         Nom du fichier .txt (ex: keynotes_tour_montreal.txt)
     """
     # Étape 5.1 — Normaliser le nom pour le fichier
-    """
-    On remplace les espaces par des underscores et on
-    supprime les caractères non autorisés dans un
-    nom de fichier Windows.
-    """
     nom_nettoye = nom_projet.lower().strip()
     nom_nettoye = nom_nettoye.replace(" ", "_")
     nom_nettoye = "".join(

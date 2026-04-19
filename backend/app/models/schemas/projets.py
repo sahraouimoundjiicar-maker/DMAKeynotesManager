@@ -9,10 +9,10 @@ Rôle :
 
 Schemas définis :
     - CreerProjetModele         créer un projet vide
-    - ModifierProjetModele      renommer un projet
+    - ModifierProjetModele      renommer/modifier un projet
     - ImporterProjetModele      importer un fichier .txt
     - ProjetReponseModele       réponse simple
-    - utilisateurProjetModele utilisateur dans un projet
+    - utilisateurProjetModele   utilisateur dans un projet
     - ProjetDetailModele        réponse avec utilisateurs
 
 Importation :
@@ -38,8 +38,9 @@ class CreerProjetModele(BaseModel):
     Réservé au super_admin uniquement.
     """
 
-    # Étape 1.1 — Nom du projet
-    nom_projet : str
+    # Étape 1.1 — Champs de création
+    nom_projet    : str
+    chemin_export : Optional[str] = None
 
     # Étape 1.2 — Validation du nom du projet
     @field_validator("nom_projet")
@@ -62,24 +63,48 @@ class CreerProjetModele(BaseModel):
             )
         return valeur_nettoyee
 
+    # Étape 1.3 — Validation du chemin d'export
+    @field_validator("chemin_export")
+    @classmethod
+    def valider_chemin_export(
+        cls, valeur: Optional[str]
+    ) -> Optional[str]:
+        """
+        Nettoie le chemin d'export si fourni.
+        Le chemin peut être vide — il sera renseigné
+        plus tard par le super_admin.
+        """
+        if valeur is None:
+            return None
+        valeur_nettoyee = valeur.strip()
+        return valeur_nettoyee if valeur_nettoyee else None
+
 
 class ModifierProjetModele(BaseModel):
     """
-    Données requises pour renommer un projet.
+    Données pour modifier un projet existant.
     Route : PUT /api/v1/projets/{id}
     Réservé au super_admin uniquement.
+
+    Tous les champs sont optionnels — seuls les champs
+    fournis seront mis à jour.
     """
 
-    # Étape 1.3 — Nouveau nom du projet
-    nouveau_nom : str
+    # Étape 1.4 — Champs de modification
+    nouveau_nom   : Optional[str] = None
+    chemin_export : Optional[str] = None
 
-    # Étape 1.4 — Validation du nouveau nom
+    # Étape 1.5 — Validation du nouveau nom
     @field_validator("nouveau_nom")
     @classmethod
-    def valider_nouveau_nom(cls, valeur: str) -> str:
+    def valider_nouveau_nom(
+        cls, valeur: Optional[str]
+    ) -> Optional[str]:
         """
-        Nettoie et valide le nouveau nom du projet.
+        Nettoie et valide le nouveau nom si fourni.
         """
+        if valeur is None:
+            return None
         valeur_nettoyee = valeur.strip()
         if not valeur_nettoyee:
             raise ValueError(
@@ -91,6 +116,20 @@ class ModifierProjetModele(BaseModel):
                 "au moins 3 caractères."
             )
         return valeur_nettoyee
+
+    # Étape 1.6 — Validation du chemin d'export
+    @field_validator("chemin_export")
+    @classmethod
+    def valider_chemin_export(
+        cls, valeur: Optional[str]
+    ) -> Optional[str]:
+        """
+        Nettoie le chemin d'export si fourni.
+        """
+        if valeur is None:
+            return None
+        valeur_nettoyee = valeur.strip()
+        return valeur_nettoyee if valeur_nettoyee else None
 
 
 class ImporterProjetModele(BaseModel):
@@ -105,17 +144,16 @@ class ImporterProjetModele(BaseModel):
         'fusionner' → ajoute uniquement les nouveaux éléments
     """
 
-    # Étape 1.5 — Champs d'import
+    # Étape 1.7 — Champs d'import
     mode         : str
     contenu_txt  : str
 
-    # Étape 1.6 — Validation du mode d'import
+    # Étape 1.8 — Validation du mode d'import
     @field_validator("mode")
     @classmethod
     def valider_mode(cls, valeur: str) -> str:
         """
         Vérifie que le mode est 'remplacer' ou 'fusionner'.
-        Aucun autre mode n'est accepté.
         """
         modes_autorises = ["remplacer", "fusionner"]
         if valeur not in modes_autorises:
@@ -126,14 +164,12 @@ class ImporterProjetModele(BaseModel):
             )
         return valeur
 
-    # Étape 1.7 — Validation du contenu du fichier
+    # Étape 1.9 — Validation du contenu du fichier
     @field_validator("contenu_txt")
     @classmethod
     def valider_contenu_txt(cls, valeur: str) -> str:
         """
         Vérifie que le contenu du fichier n'est pas vide.
-        La validation complète du format est faite
-        dans le service keynotes_fichier.
         """
         if not valeur.strip():
             raise ValueError(
@@ -155,6 +191,7 @@ class ProjetReponseModele(BaseModel):
     # Étape 2.1 — Champs de réponse simple
     id                  : int
     nom                 : str
+    chemin_export       : Optional[str] = None
     txt_a_jour          : bool
     date_dernier_export : Optional[datetime] = None
     date_creation       : datetime
@@ -188,10 +225,11 @@ class ProjetDetailModele(BaseModel):
     # Étape 2.3 — Champs de réponse détaillée
     id                  : int
     nom                 : str
+    chemin_export       : Optional[str] = None
     txt_a_jour          : bool
     date_dernier_export : Optional[datetime] = None
     date_creation       : datetime
-    utilisateurs      : list[utilisateurProjetModele] = []
+    utilisateurs        : list[utilisateurProjetModele] = []
 
     class Config:
         """Permet la conversion depuis les objets PostgreSQL."""

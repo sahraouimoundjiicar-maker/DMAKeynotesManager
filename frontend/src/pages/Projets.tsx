@@ -17,6 +17,7 @@ import { projetsService, utilisateursService, accesService } from '../api/api';
 interface Projet {
   id: number;
   nom: string;
+  chemin_export: string | null;
   txt_a_jour: boolean;
   date_dernier_export: string | null;
   date_creation: string; // Format ISO depuis l'API
@@ -46,11 +47,13 @@ type ModeFormulaire = 'creation' | 'lecture' | 'edition';
 
 // Structure de l'état du formulaire (champs contrôlés par React)
 interface EtatFormulaire {
-  nomProjet: string;
+  nomProjet    : string;
+  cheminExport : string;
 }
 
 const ETAT_FORMULAIRE_VIDE: EtatFormulaire = {
-  nomProjet: '',
+  nomProjet    : '',
+  cheminExport : '',
 };
 
 // ============================================================
@@ -88,29 +91,12 @@ interface PropsNotification {
 }
 
 const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) => {
-  // Fermeture automatique uniquement pour success et info (5 secondes)
-  // error et warning restent jusqu'au clic sur ✖
   useEffect(() => {
-    if (type === 'success' || type === 'info') {
-      const minuterie = setTimeout(onClose, 5000);
-      return () => clearTimeout(minuterie);
-    }
-  }, [type, onClose]);
+    const minuterie = setTimeout(onClose, 3000);
+    return () => clearTimeout(minuterie);
+  }, [onClose]);
 
-  return (
-    <div className={`notification ${type}`}>
-      <span>{message}</span>
-      {(type === 'error' || type === 'warning') && (
-        <button
-          onClick={onClose}
-          aria-label="Fermer"
-          className="notification-close"
-        >
-          ✖
-        </button>
-      )}
-    </div>
-  );
+  return <div className={`notification ${type}`}>{message}</div>;
 };
 
 // ============================================================
@@ -299,9 +285,8 @@ const Projets: React.FC = () => {
   const exportImportEstActif = projetSelectionne !== null;
 
   // Détermine si la zone d'ajout d'utilisateur est active
-  // La page Projets est accessible uniquement au super_admin
-  // donc pas besoin de vérifier le rôle ici — le backend le vérifie de toute façon
-  const ajoutUtilisateurEstActif = modeFormulaire === 'creation' || modeFormulaire === 'edition';
+  // Réservé au super_admin — le backend rejette les appels accesService si non super_admin
+  const ajoutUtilisateurEstActif = estSuperAdmin && (modeFormulaire === 'creation' || modeFormulaire === 'edition');
 
   // ============================================================
   // SECTION 7 — NOTIFICATIONS
@@ -393,7 +378,7 @@ const Projets: React.FC = () => {
   function activerModeCreation() {
     setModeFormulaire('creation');
     setProjetSelectionne(null);
-    setFormulaire(ETAT_FORMULAIRE_VIDE);
+    setFormulaire(ETAT_FORMULAIRE_VIDE); // nomProjet + cheminExport vides
     setUtilisateursAcces([]);
     setRechercheProjet('');
     setRechercheUtilisateur('');
@@ -404,7 +389,10 @@ const Projets: React.FC = () => {
   async function activerModeLecture(projet: Projet) {
     setModeFormulaire('lecture');
     setProjetSelectionne(projet);
-    setFormulaire({ nomProjet: projet.nom });
+    setFormulaire({
+      nomProjet    : projet.nom,
+      cheminExport : projet.chemin_export ?? '',
+    });
     setRechercheProjet(projet.nom);
     setRechercheUtilisateur('');
     setUtilisateurEnAttente(null);
@@ -497,20 +485,23 @@ const Projets: React.FC = () => {
       try {
         // Étape 1 — Crée le projet via POST /projets
         const reponseCreation = await projetsService.create({
-          nom_projet: formulaire.nomProjet.trim(),
+          nom_projet    : formulaire.nomProjet.trim(),
+          chemin_export : formulaire.cheminExport.trim() || undefined,
         });
         const nouveauProjet: Projet = reponseCreation.data;
 
         // Étape 2 — Attribue les accès aux utilisateurs sélectionnés
-        // La page est réservée au super_admin — pas de vérification de rôle nécessaire ici
-        for (const utilisateur of utilisateursAcces) {
-          try {
-            await accesService.attribuer(nouveauProjet.id, { id_utilisateur: utilisateur.id });
-          } catch (erreurAcces) {
-            console.warn(
-              `Accès non attribué pour ${utilisateur.prenom} ${utilisateur.nom}:`,
-              erreurAcces
-            );
+        // Note : accesService est réservé au super_admin (backend vérifie le token)
+        if (estSuperAdmin) {
+          for (const utilisateur of utilisateursAcces) {
+            try {
+              await accesService.attribuer(nouveauProjet.id, { id_utilisateur: utilisateur.id });
+            } catch (erreurAcces) {
+              console.warn(
+                `Accès non attribué pour ${utilisateur.prenom} ${utilisateur.nom}:`,
+                erreurAcces
+              );
+            }
           }
         }
 
@@ -532,9 +523,14 @@ const Projets: React.FC = () => {
     if (modeFormulaire === 'edition' && projetSelectionne) {
       try {
         // Étape 1 — Renomme le projet si le nom a changé
-        if (formulaire.nomProjet.trim() !== projetSelectionne.nom) {
+        // Met à jour le nom et/ou le chemin d'export si modifiés
+        const nomChange = formulaire.nomProjet.trim() !== projetSelectionne.nom;
+        const cheminChange = (formulaire.cheminExport.trim() || null) !== projetSelectionne.chemin_export;
+
+        if (nomChange || cheminChange) {
           await projetsService.update(projetSelectionne.id, {
-            nouveau_nom: formulaire.nomProjet.trim(),
+            nouveau_nom   : nomChange ? formulaire.nomProjet.trim() : undefined,
+            chemin_export : cheminChange ? (formulaire.cheminExport.trim() || undefined) : undefined,
           });
         }
 
@@ -546,30 +542,30 @@ const Projets: React.FC = () => {
         const idsActuels = new Set(utilisateursActuels.map((u) => u.id_utilisateur));
         const idsVoulus = new Set(utilisateursAcces.map((u) => u.id));
 
-        // Synchronise les accès — retire les accès supprimés et ajoute les nouveaux
-        // La page est réservée au super_admin — pas de vérification de rôle nécessaire ici
-
-        // Retire les utilisateurs qui ne sont plus dans la liste
-        for (const idActuel of idsActuels) {
-          if (!idsVoulus.has(idActuel)) {
-            try {
-              await accesService.retirer(projetSelectionne.id, idActuel);
-            } catch (erreurRetrait) {
-              console.warn(`Impossible de retirer l'accès pour id=${idActuel}:`, erreurRetrait);
+        // Synchronise les accès — réservé au super_admin (backend vérifie le token)
+        if (estSuperAdmin) {
+          // Retire les utilisateurs qui ne sont plus dans la liste
+          for (const idActuel of idsActuels) {
+            if (!idsVoulus.has(idActuel)) {
+              try {
+                await accesService.retirer(projetSelectionne.id, idActuel);
+              } catch (erreurRetrait) {
+                console.warn(`Impossible de retirer l'accès pour id=${idActuel}:`, erreurRetrait);
+              }
             }
           }
-        }
 
-        // Ajoute les nouveaux utilisateurs
-        for (const utilisateur of utilisateursAcces) {
-          if (!idsActuels.has(utilisateur.id)) {
-            try {
-              await accesService.attribuer(projetSelectionne.id, { id_utilisateur: utilisateur.id });
-            } catch (erreurAjout) {
-              console.warn(
-                `Impossible d'ajouter l'accès pour ${utilisateur.prenom} ${utilisateur.nom}:`,
-                erreurAjout
-              );
+          // Ajoute les nouveaux utilisateurs
+          for (const utilisateur of utilisateursAcces) {
+            if (!idsActuels.has(utilisateur.id)) {
+              try {
+                await accesService.attribuer(projetSelectionne.id, { id_utilisateur: utilisateur.id });
+              } catch (erreurAjout) {
+                console.warn(
+                  `Impossible d'ajouter l'accès pour ${utilisateur.prenom} ${utilisateur.nom}:`,
+                  erreurAjout
+                );
+              }
             }
           }
         }
@@ -727,7 +723,7 @@ const Projets: React.FC = () => {
             {/* CELLULE 1 — Nom du projet */}
             <div className="cell-form">
               <label className="cell-title" htmlFor="champ-nom-projet">
-                Nom du projet
+                Nom du projet *
               </label>
               <input
                 type="text"
@@ -736,13 +732,29 @@ const Projets: React.FC = () => {
                 placeholder="Saisissez le nom du projet"
                 value={formulaire.nomProjet}
                 readOnly={!formulaireEstModifiable}
-                onChange={(e) => setFormulaire({ nomProjet: e.target.value })}
+                onChange={(e) => setFormulaire({ ...formulaire, nomProjet: e.target.value })}
               />
             </div>
 
-            {/* CELLULE 2 — Chercher utilisateur à ajouter */}
+            {/* CELLULE 2 — Chemin d'export */}
             <div className="cell-form">
-              <label className="cell-title" htmlFor="recherche-utilisateur-projet">
+              <label className="cell-title" htmlFor="champ-chemin-export">
+                Chemin d'export
+              </label>
+              <input
+                type="text"
+                id="champ-chemin-export"
+                className="form-input"
+                placeholder="ex: C:/projets/ ou /home/documents"
+                value={formulaire.cheminExport}
+                readOnly={!formulaireEstModifiable}
+                onChange={(e) => setFormulaire({ ...formulaire, cheminExport: e.target.value })}
+              />
+            </div>
+
+            {/* CELLULE 3 — Chercher utilisateur à ajouter */}
+            <div className="cell-form">
+              <label className="form-label" htmlFor="recherche-utilisateur-projet">
                 Chercher utilisateur
               </label>
               <ChampRecherche<UtilisateurAPI>
@@ -892,6 +904,7 @@ const Projets: React.FC = () => {
               <tr>
                 <th>ID</th>
                 <th>Nom du projet</th>
+                <th>Chemin d'export</th>
                 <th>Date de création</th>
                 <th>Dernier export</th>
                 <th>Fichier .txt</th>
@@ -907,6 +920,7 @@ const Projets: React.FC = () => {
                 >
                   <td>{projet.id}</td>
                   <td>{projet.nom}</td>
+                  <td>{projet.chemin_export ?? '—'}</td>
                   <td>{formaterDate(projet.date_creation)}</td>
                   <td>{formaterDate(projet.date_dernier_export)}</td>
                   <td>

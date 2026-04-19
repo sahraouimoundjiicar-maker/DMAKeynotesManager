@@ -108,8 +108,9 @@ export const utilisateursService = {
 export const projetsService = {
   getAll: () => api.get('/projets'),
   getById: (id: number) => api.get(`/projets/${id}`),
-  create: (data: { nom_projet: string }) => api.post('/projets', data),
-  update: (id: number, data: { nouveau_nom: string }) =>
+  create: (data: { nom_projet: string; chemin_export?: string }) =>
+    api.post('/projets', data),
+  update: (id: number, data: { nouveau_nom?: string; chemin_export?: string }) =>
     api.put(`/projets/${id}`, data),
   delete: (id: number) => api.delete(`/projets/${id}`),
   exporter: (id: number) => api.get(`/projets/${id}/exporter`),
