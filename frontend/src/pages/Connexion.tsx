@@ -263,28 +263,33 @@ const Connexion: React.FC = () => {
       // Étape 5 — Gestion des erreurs API
       console.error('Erreur connexion:', erreur);
 
-      // Extraire le message retourné par le backend
-      let messageErreur = extraireMessageErreurApi(
-        erreur,
-        'Erreur de connexion. Veuillez réessayer.'
-      );
+      // Détecter le code HTTP retourné par le backend :
+      //   403 → Compte en attente d'approbation (backend distingue ce cas)
+      //   401 → Email ou mot de passe incorrect
+      //   Autre → Erreur serveur inattendue
+      //
+      // On utilise le code HTTP et non le texte du message pour éviter
+      // toute fragilité liée aux changements de libellés côté backend.
+      const codeHttp = erreur?.response?.status;
 
-      // Personnaliser le message selon le type d'erreur :
-      // - Compte en attente → warning orange (cas légitime à distinguer)
-      // - Toutes les autres erreurs → message générique pour éviter
-      //   de révéler si l'email existe ou non dans la base (user enumeration)
-      const messageLower = messageErreur.toLowerCase();
-
-      if (messageLower.includes('attente') || messageLower.includes('approbation')) {
+      if (codeHttp === 403) {
         // Compte existant mais pas encore approuvé par le super_admin
+        // Le backend retourne 403 spécifiquement pour ce cas
         afficherNotification(
           "Compte en attente d'approbation. Veuillez patienter jusqu'à validation par l'administrateur.",
           'warning'
         );
-      } else {
-        // Identifiants incorrects ou autre erreur serveur
+      } else if (codeHttp === 401) {
+        // Identifiants incorrects — message générique pour éviter
+        // de révéler si l'email existe ou non (user enumeration)
         afficherNotification(
           'Email ou mot de passe incorrect. Veuillez réessayer.',
+          'error'
+        );
+      } else {
+        // Erreur serveur inattendue (500, réseau, etc.)
+        afficherNotification(
+          'Erreur de connexion. Veuillez réessayer.',
           'error'
         );
       }
