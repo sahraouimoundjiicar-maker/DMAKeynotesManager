@@ -91,12 +91,29 @@ interface PropsNotification {
 }
 
 const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) => {
+  // Fermeture automatique uniquement pour success et info (5 secondes)
+  // error et warning restent jusqu'au clic sur ✖
   useEffect(() => {
-    const minuterie = setTimeout(onClose, 3000);
-    return () => clearTimeout(minuterie);
-  }, [onClose]);
+    if (type === 'success' || type === 'info') {
+      const minuterie = setTimeout(onClose, 5000);
+      return () => clearTimeout(minuterie);
+    }
+  }, [type, onClose]);
 
-  return <div className={`notification ${type}`}>{message}</div>;
+  return (
+    <div className={`notification ${type}`}>
+      <span>{message}</span>
+      {(type === 'error' || type === 'warning') && (
+        <button
+          onClick={onClose}
+          aria-label="Fermer"
+          className="notification-close"
+        >
+          ✖
+        </button>
+      )}
+    </div>
+  );
 };
 
 // ============================================================
@@ -654,10 +671,7 @@ const Projets: React.FC = () => {
       // Retourne false si l'utilisateur a annulé la fenêtre
       const succes = await projetsService.exporter(projetSelectionne.id, projetSelectionne.nom);
       if (!succes) return; // Annulation — pas de notification
-      afficherNotification(
-        `Fichier "${projetSelectionne.nom}" exporté avec succès`,
-        'success'
-      );
+      afficherNotification('Exportation !', 'success');
       // Recharge pour mettre à jour txt_a_jour et date_dernier_export
       await chargerProjets();
     } catch (erreur) {
@@ -763,7 +777,7 @@ const Projets: React.FC = () => {
                 type="text"
                 id="champ-chemin-export"
                 className="form-input"
-                placeholder='ex: I:\\26\\2026-017 Dream Industrial\\X - Data'  
+                placeholder="Sélectionner le dossier X - Data de votre projet"
                 value={formulaire.cheminExport}
                 readOnly={!formulaireEstModifiable}
                 onChange={(e) => setFormulaire({ ...formulaire, cheminExport: e.target.value })}
