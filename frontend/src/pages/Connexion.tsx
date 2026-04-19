@@ -241,9 +241,14 @@ const Connexion: React.FC = () => {
         localStorage.setItem('user_role',  reponse.data.role || 'utilisateur');
         localStorage.setItem('user_email', email.trim());
 
+        // Étape 4 — Désactiver le chargement puis afficher la notification
+        // (ordre important : setIsLoading avant afficherNotification
+        // pour éviter deux setState consécutifs qui causeraient un
+        // re-render et un clignotement de la notification)
+        setIsLoading(false);
         afficherNotification('Connexion réussie ! Bienvenue', 'success');
 
-        // Étape 4 — Rediriger selon le rôle après un court délai
+        // Étape 5 — Rediriger selon le rôle après un court délai
         // (laisser le temps à l'utilisateur de voir la notification de succès)
         const role = reponse.data.role || 'utilisateur';
         setTimeout(() => {
@@ -256,12 +261,18 @@ const Connexion: React.FC = () => {
 
       } else {
         // Cas anormal : token absent dans la réponse
+        setIsLoading(false);
         afficherNotification('Réponse du serveur invalide. Veuillez réessayer.', 'error');
       }
 
     } catch (erreur: any) {
-      // Étape 5 — Gestion des erreurs API
+      // Étape 6 — Gestion des erreurs API
       console.error('Erreur connexion:', erreur);
+
+      // Désactiver le chargement AVANT d'afficher la notification
+      // pour éviter deux setState consécutifs qui causeraient un
+      // re-render et un clignotement de la notification
+      setIsLoading(false);
 
       // Détecter le code HTTP retourné par le backend :
       //   403 → Compte en attente d'approbation (backend distingue ce cas)
@@ -293,10 +304,6 @@ const Connexion: React.FC = () => {
           'error'
         );
       }
-
-    } finally {
-      // Toujours réactiver le bouton, que la connexion ait réussi ou échoué
-      setIsLoading(false);
     }
   }
 
