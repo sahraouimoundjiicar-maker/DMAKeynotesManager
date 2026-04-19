@@ -987,7 +987,9 @@ const Keynotes: React.FC = () => {
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
 
-      await projetsService.exporter(idProjetSelectionne, nomProjet);
+      // Retourne false si l'utilisateur a annulé la fenêtre
+      const succes = await projetsService.exporter(idProjetSelectionne, nomProjet);
+      if (!succes) return; // Annulation — pas de notification
       afficherNotification('Fichier exporté avec succès', 'success');
     } catch (erreur) {
       console.error('Erreur export:', erreur);

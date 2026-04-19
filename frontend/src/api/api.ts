@@ -113,7 +113,7 @@ export const projetsService = {
   update: (id: number, data: { nouveau_nom?: string; chemin_export?: string }) =>
     api.put(`/projets/${id}`, data),
   delete: (id: number) => api.delete(`/projets/${id}`),
-  exporter: async (id: number, nomProjet: string): Promise<void> => {
+  exporter: async (id: number, nomProjet: string): Promise<boolean> => {
     // Étape 1 — Récupérer le fichier depuis le backend
     const token = localStorage.getItem('token');
     const reponse = await fetch(
@@ -145,10 +145,10 @@ export const projetsService = {
         const writable = await handle.createWritable();
         await writable.write(blob);
         await writable.close();
-        return;
+        return true; // Succès
       } catch (erreur: any) {
-        // L'utilisateur a annulé la fenêtre — ne pas lancer d'erreur
-        if (erreur?.name === 'AbortError') return;
+        // L'utilisateur a annulé la fenêtre — retourner false sans erreur
+        if (erreur?.name === 'AbortError') return false;
         // Autre erreur — fallback vers téléchargement classique
         console.warn('showSaveFilePicker échoué, fallback téléchargement:', erreur);
       }
@@ -164,6 +164,7 @@ export const projetsService = {
     lien.click();
     document.body.removeChild(lien);
     window.URL.revokeObjectURL(url);
+    return true; // Succès
   },
   importer: (id: number, data: {
     mode        : 'remplacer' | 'fusionner';

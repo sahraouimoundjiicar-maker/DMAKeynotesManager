@@ -651,7 +651,9 @@ const Projets: React.FC = () => {
 
       // Déclenche la fenêtre "Enregistrer sous" (Chrome/Edge)
       // ou le téléchargement classique (Firefox/Safari)
-      await projetsService.exporter(projetSelectionne.id, projetSelectionne.nom);
+      // Retourne false si l'utilisateur a annulé la fenêtre
+      const succes = await projetsService.exporter(projetSelectionne.id, projetSelectionne.nom);
+      if (!succes) return; // Annulation — pas de notification
       afficherNotification(
         `Fichier "${projetSelectionne.nom}" exporté avec succès`,
         'success'
