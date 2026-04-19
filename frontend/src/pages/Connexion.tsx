@@ -219,8 +219,17 @@ const Connexion: React.FC = () => {
 
         afficherNotification('Connexion réussie ! Bienvenue', 'success');
 
-        // Délai court pour que l'utilisateur voie la notification avant la redirection
-        setTimeout(() => navigate('/utilisateurs'), 1500);
+        // Redirige selon le rôle :
+        // - super_admin → page Utilisateurs (gestion de l'équipe)
+        // - utilisateur → page Keynotes (accès aux keynotes)
+        const role = reponse.data.role || 'utilisateur';
+        setTimeout(() => {
+          if (role === 'super_admin') {
+            navigate('/utilisateurs');
+          } else {
+            navigate('/keynotes');
+          }
+        }, 1500);
       } else {
         afficherNotification('Réponse du serveur invalide', 'error');
       }
