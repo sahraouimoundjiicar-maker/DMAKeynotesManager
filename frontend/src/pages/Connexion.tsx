@@ -28,8 +28,6 @@ const ERREURS_VIDES: EtatErreurs = {
 
 // ============================================================
 // SECTION 2 — SOUS-COMPOSANT : Notification
-// - error / warning : reste jusqu'au clic sur ✖
-// - success / info  : disparaît automatiquement après 5 secondes
 // ============================================================
 
 interface PropsNotification {
@@ -39,11 +37,24 @@ interface PropsNotification {
 }
 
 const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) => {
+  console.log('🔔 NOTIFICATION CRÉÉE:', { message, type });
+
   // Fermeture automatique uniquement pour success et info
   React.useEffect(() => {
+    console.log(`📋 useEffect Notification - type: ${type}`);
+
     if (type === 'success' || type === 'info') {
-      const minuterie = setTimeout(onClose, 5000);
-      return () => clearTimeout(minuterie);
+      console.log(`⏰ Fermeture automatique programmée dans 5 secondes pour ${type}`);
+      const minuterie = setTimeout(() => {
+        console.log(`❌ Fermeture automatique déclenchée pour ${type}`);
+        onClose();
+      }, 5000);
+      return () => {
+        console.log(`🧹 Nettoyage de la minuterie pour ${type}`);
+        clearTimeout(minuterie);
+      };
+    } else {
+      console.log(`🚫 Pas de fermeture automatique pour ${type} (attend clic sur ✖)`);
     }
   }, [type, onClose]);
 
@@ -52,7 +63,10 @@ const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) =
       <span>{message}</span>
       {(type === 'error' || type === 'warning') && (
         <button
-          onClick={onClose}
+          onClick={() => {
+            console.log(`🖱️ Clic sur le bouton ✖ pour fermer la notification ${type}`);
+            onClose();
+          }}
           aria-label="Fermer"
           className="notification-close"
         >
@@ -89,6 +103,7 @@ const Connexion: React.FC = () => {
   // ============================================================
 
   function afficherNotification(message: string, type: TypeNotification) {
+    console.log(`📢 afficherNotification appelée: "${message}" (type: ${type})`);
     setNotification({ message, type, cle: Date.now() });
   }
 
@@ -203,106 +218,93 @@ const Connexion: React.FC = () => {
 
   // ============================================================
   // SECTION 8 — CONNEXION
-  //
-  // Flux :
-  //   1. Validation locale des champs (email + mot de passe)
-  //   2. Appel API POST /auth/login
-  //   3. Stockage du token JWT et du rôle dans localStorage
-  //   4. Redirection selon le rôle :
-  //        - super_admin → /utilisateurs
-  //        - utilisateur → /keynotes
-  //
-  // Gestion des erreurs :
-  //   - Compte en attente : notification warning (orange) — reste jusqu'au clic ✖
-  //   - Autres erreurs    : notification error (rouge)   — reste jusqu'au clic ✖
-  //
-  // Sécurité :
-  //   On ne distingue PAS "email inconnu" de "mot de passe incorrect"
-  //   pour éviter la faille user enumeration (un attaquant ne doit pas
-  //   savoir si un email existe dans la base de données).
   // ============================================================
 
   async function handleLogin() {
-    // Étape 1 — Validation locale avant tout appel réseau
-    if (!validerConnexion()) return;
+    console.log('🔐 handleLogin - Début');
+    console.log('Email:', email.trim());
+
+    if (!validerConnexion()) {
+      console.log('❌ Validation locale échouée');
+      return;
+    }
 
     setIsLoading(true);
+    console.log('⏳ isLoading = true');
 
     try {
-      // Étape 2 — Appel API de connexion
+      console.log('📡 Appel API authService.connexion...');
       const reponse = await authService.connexion({
-        email        : email.trim(),
-        mot_de_passe : password,
+        email: email.trim(),
+        mot_de_passe: password,
       });
 
+      console.log('📥 Réponse API reçue:', reponse);
+      console.log('📥 reponse.data:', reponse.data);
+      console.log('📥 reponse.data?.access_token:', reponse.data?.access_token);
+
       if (reponse.data?.access_token) {
-        // Étape 3 — Stocker les données de session dans localStorage
-        localStorage.setItem('token',      reponse.data.access_token);
-        localStorage.setItem('user_role',  reponse.data.role || 'utilisateur');
+        console.log('✅ Token reçu - Connexion réussie');
+
+        localStorage.setItem('token', reponse.data.access_token);
+        localStorage.setItem('user_role', reponse.data.role || 'utilisateur');
         localStorage.setItem('user_email', email.trim());
 
-        // Étape 4 — Désactiver le chargement puis afficher la notification
-        // (ordre important : setIsLoading avant afficherNotification
-        // pour éviter deux setState consécutifs qui causeraient un
-        // re-render et un clignotement de la notification)
         setIsLoading(false);
+        console.log('⏳ isLoading = false (succès)');
+
         afficherNotification('Connexion réussie ! Bienvenue', 'success');
 
-        // Étape 5 — Rediriger selon le rôle après un court délai
-        // (laisser le temps à l'utilisateur de voir la notification de succès)
         const role = reponse.data.role || 'utilisateur';
+        console.log(`👤 Rôle détecté: ${role}, redirection dans 1.5s`);
+
         setTimeout(() => {
           if (role === 'super_admin') {
+            console.log('🚀 Redirection vers /utilisateurs');
             navigate('/utilisateurs');
           } else {
+            console.log('🚀 Redirection vers /keynotes');
             navigate('/keynotes');
           }
         }, 1500);
-
       } else {
-        // Cas anormal : token absent dans la réponse
+        console.log('⚠️ Pas de token dans la réponse');
         setIsLoading(false);
         afficherNotification('Réponse du serveur invalide. Veuillez réessayer.', 'error');
       }
 
     } catch (erreur: any) {
-      // Étape 6 — Gestion des erreurs API
-      console.error('Erreur connexion:', erreur);
+      console.log('=== 🔴 DÉBUT CATCH ERREUR ===');
+      console.log('Erreur complète:', erreur);
+      console.log('Type de erreur:', typeof erreur);
+      console.log('erreur?.response:', erreur?.response);
+      console.log('erreur?.response?.status:', erreur?.response?.status);
+      console.log('erreur?.response?.data:', erreur?.response?.data);
+      console.log('erreur?.response?.data?.detail:', erreur?.response?.data?.detail);
+      console.log('erreur?.message:', erreur?.message);
+      console.log('=== 🔴 FIN CATCH ERREUR ===');
 
-      // Désactiver le chargement AVANT d'afficher la notification
-      // pour éviter deux setState consécutifs qui causeraient un
-      // re-render et un clignotement de la notification
       setIsLoading(false);
+      console.log('⏳ isLoading = false (erreur)');
 
-      // Détecter le code HTTP retourné par le backend :
-      //   403 → Compte en attente d'approbation (backend distingue ce cas)
-      //   401 → Email ou mot de passe incorrect
-      //   Autre → Erreur serveur inattendue
-      //
-      // On utilise le code HTTP et non le texte du message pour éviter
-      // toute fragilité liée aux changements de libellés côté backend.
       const codeHttp = erreur?.response?.status;
+      console.log(`📊 Code HTTP détecté: ${codeHttp}`);
 
       if (codeHttp === 403) {
-        // Compte existant mais pas encore approuvé par le super_admin
-        // Le backend retourne 403 spécifiquement pour ce cas
+        console.log('✅ CAS 403 DÉTECTÉ - Compte en attente');
+        console.log('📢 Affichage notification WARNING (jaune)');
         afficherNotification(
           "Compte en attente d'approbation. Veuillez patienter jusqu'à validation par l'administrateur.",
           'warning'
         );
       } else if (codeHttp === 401) {
-        // Identifiants incorrects — message générique pour éviter
-        // de révéler si l'email existe ou non (user enumeration)
-        afficherNotification(
-          'Email ou mot de passe incorrect. Veuillez réessayer.',
-          'error'
-        );
+        console.log('✅ CAS 401 DÉTECTÉ - Identifiants incorrects');
+        console.log('📢 Affichage notification ERROR (rouge)');
+        afficherNotification('Email ou mot de passe incorrect. Veuillez réessayer.', 'error');
       } else {
-        // Erreur serveur inattendue (500, réseau, etc.)
-        afficherNotification(
-          'Erreur de connexion. Veuillez réessayer.',
-          'error'
-        );
+        console.log(`⚠️ AUTRE CODE HTTP: ${codeHttp} - Erreur inconnue`);
+        console.log('📢 Affichage notification ERROR générique');
+        afficherNotification('Erreur de connexion. Veuillez réessayer.', 'error');
       }
     }
   }
@@ -312,10 +314,18 @@ const Connexion: React.FC = () => {
   // ============================================================
 
   async function handleRegister() {
-    if (!validerInscription()) return;
+    console.log('📝 handleRegister - Début');
+
+    if (!validerInscription()) {
+      console.log('❌ Validation inscription échouée');
+      return;
+    }
 
     setIsLoading(true);
+    console.log('⏳ isLoading = true');
+
     try {
+      console.log('📡 Appel API authService.inscription...');
       await authService.inscription({
         nom: nom.trim(),
         prenom: prenom.trim(),
@@ -324,12 +334,14 @@ const Connexion: React.FC = () => {
         confirmer_mot_de_passe: confirmPassword,
       });
 
+      console.log('✅ Inscription réussie');
       afficherNotification(
         "Inscription réussie ! Votre compte est en attente d'approbation par l'administrateur.",
         'success'
       );
 
       setTimeout(() => {
+        console.log('🔄 Basculement vers mode connexion');
         setIsRegisterMode(false);
         setNom('');
         setPrenom('');
@@ -340,7 +352,12 @@ const Connexion: React.FC = () => {
       }, 2000);
 
     } catch (erreur: any) {
-      console.error('Erreur inscription:', erreur);
+      console.log('=== 🔴 ERREUR INSCRIPTION ===');
+      console.log('Erreur:', erreur);
+      console.log('erreur?.response?.status:', erreur?.response?.status);
+      console.log('erreur?.response?.data:', erreur?.response?.data);
+      console.log('=== 🔴 FIN ERREUR INSCRIPTION ===');
+
       const messageErreur = extraireMessageErreurApi(
         erreur,
         "Erreur lors de l'inscription. Veuillez réessayer."
@@ -348,6 +365,7 @@ const Connexion: React.FC = () => {
       afficherNotification(messageErreur, 'error');
     } finally {
       setIsLoading(false);
+      console.log('⏳ isLoading = false (fin inscription)');
     }
   }
 
@@ -357,6 +375,7 @@ const Connexion: React.FC = () => {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    console.log(`📝 Formulaire soumis - mode: ${isRegisterMode ? 'inscription' : 'connexion'}`);
     if (isRegisterMode) {
       handleRegister();
     } else {
@@ -376,7 +395,10 @@ const Connexion: React.FC = () => {
           key={notification.cle}
           message={notification.message}
           type={notification.type}
-          onClose={() => setNotification(null)}
+          onClose={() => {
+            console.log(`❌ Fermeture manuelle de la notification ${notification.type}`);
+            setNotification(null);
+          }}
         />
       )}
 
