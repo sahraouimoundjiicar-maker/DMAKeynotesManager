@@ -1347,12 +1347,12 @@ const Keynotes: React.FC = () => {
             {/* Largeur fixe pour la colonne N° — évite que les numéros longs
                 élargissent la colonne et décalent tout le tableau */}
             <colgroup>
-              <col style={{ width: '80px', minWidth: '80px' }} />
+              <col style={{ width: '40px', minWidth: '40px' }} />
               <col />
             </colgroup>
             <thead>
               <tr>
-                <th style={{ width: '80px' }}>N°</th>
+                <th style={{ width: '40px' }}>N°</th>
                 <th>Description</th>
               </tr>
             </thead>
