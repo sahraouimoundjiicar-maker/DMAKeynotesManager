@@ -608,6 +608,18 @@ const Keynotes: React.FC = () => {
   // ============================================================
 
   function selectionnerCategorie(categorie: Categorie) {
+    // Sélectionner le projet automatiquement si pas encore sélectionné
+    // et charger ses catégories/notes si absentes
+    if (idProjetSelectionne !== categorie.id_projet) {
+      setIdProjetSelectionne(categorie.id_projet);
+      const categoriesDejaChargees = categories.some(
+        (c) => c.id_projet === categorie.id_projet
+      );
+      if (!categoriesDejaChargees) {
+        chargerCategoriesEtNotes(categorie.id_projet);
+      }
+    }
+
     setTypeSelection('categorie');
     setCategorieSelectionnee(categorie);
     setNoteSelectionnee(null);
@@ -649,6 +661,18 @@ const Keynotes: React.FC = () => {
   // ============================================================
 
   function selectionnerNote(note: Note) {
+    // Sélectionner le projet automatiquement si pas encore sélectionné
+    // et charger ses catégories/notes si absentes
+    if (idProjetSelectionne !== note.id_projet) {
+      setIdProjetSelectionne(note.id_projet);
+      const categoriesDejaChargees = categories.some(
+        (c) => c.id_projet === note.id_projet
+      );
+      if (!categoriesDejaChargees) {
+        chargerCategoriesEtNotes(note.id_projet);
+      }
+    }
+
     setTypeSelection('note');
     setNoteSelectionnee(note);
     setCategorieSelectionnee(null);
