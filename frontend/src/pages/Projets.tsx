@@ -745,7 +745,7 @@ const Projets: React.FC = () => {
                 type="text"
                 id="champ-chemin-export"
                 className="form-input"
-                placeholder="ex: C:/projets/ ou /home/documents"
+                placeholder='ex: I:\\26\\2026-017 Dream Industrial\\X - Data'  
                 value={formulaire.cheminExport}
                 readOnly={!formulaireEstModifiable}
                 onChange={(e) => setFormulaire({ ...formulaire, cheminExport: e.target.value })}

@@ -66,9 +66,8 @@ def exporter_fichier_txt(
     Tri numérique naturel (1, 2, 10 et non 1, 10, 2).
     Met à jour txt_a_jour = True après l'export.
 
-    Format généré :
-        numero_cat  description_cat  (vide)
-        numero_note description_note numero_cat_parent
+    Le fichier est écrit dans le dossier chemin_export
+    du projet si défini, sinon dans CHEMIN_DOSSIER_KEYNOTES.
 
     Args:
         id_projet        : ID du projet
@@ -88,10 +87,8 @@ def exporter_fichier_txt(
         )
 
         # Étape 1.2 — Trier les catégories numériquement
-        """
-        Le tri naturel garantit l'ordre :
-        1, 2, 10, 20 plutôt que 1, 10, 2, 20.
-        """
+        # Le tri naturel garantit l'ordre : 1, 2, 10, 20
+        # plutôt que 1, 10, 2, 20.
         categories_triees = sorted(
             categories,
             key=lambda c: _cle_tri_naturel(c["numero"])
@@ -129,10 +126,32 @@ def exporter_fichier_txt(
                 ])
                 lignes.append(ligne_note)
 
-        # Étape 1.4 — Écrire le fichier .txt
+        # Étape 1.4 — Déterminer le dossier de destination
+        # Priorité : chemin_export du projet → dossier par défaut
+        projet = repo_projets.obtenir_projet_par_id(
+            connexion, id_projet
+        )
+        chemin_export_projet = (
+            projet.get("chemin_export") if projet else None
+        )
+
+        if chemin_export_projet and os.path.isdir(chemin_export_projet):
+            # Utiliser le chemin d'export défini sur le projet
+            dossier_destination = chemin_export_projet
+        else:
+            # Fallback sur le dossier par défaut du serveur
+            dossier_destination = CHEMIN_DOSSIER_KEYNOTES
+            if chemin_export_projet:
+                logger.warning(
+                    f"Chemin d'export '{chemin_export_projet}' "
+                    "introuvable ou inaccessible — "
+                    "utilisation du dossier par défaut."
+                )
+
+        # Étape 1.5 — Écrire le fichier .txt
         nom_fichier = _construire_nom_fichier(nom_projet)
         chemin_fichier = os.path.join(
-            CHEMIN_DOSSIER_KEYNOTES, nom_fichier
+            dossier_destination, nom_fichier
         )
 
         with open(
@@ -142,15 +161,15 @@ def exporter_fichier_txt(
             fichier.write("\n".join(lignes))
 
         logger.info(
-            f"Fichier .txt exporté : {nom_fichier}"
+            f"Fichier .txt exporté : {chemin_fichier}"
         )
 
-        # Étape 1.5 — Mettre à jour txt_a_jour = True
+        # Étape 1.6 — Mettre à jour txt_a_jour = True
         repo_projets.mettre_a_jour_txt_a_jour(
             connexion, id_projet, True
         )
 
-        # Étape 1.6 — Enregistrer dans l'historique
+        # Étape 1.7 — Enregistrer dans l'historique
         repo_historique.inserer_historique(
             connexion,
             id_projet        = id_projet,
@@ -239,11 +258,8 @@ def importer_fichier_txt(
             )
 
         # Étape 2.4 — Marquer le fichier .txt comme périmé
-        """
-        Après import, le fichier .txt sur le serveur ne
-        reflète pas encore les données importées.
-        Il faut faire un export pour le régénérer.
-        """
+        # Après import, il faut faire un export pour régénérer
+        # le fichier .txt avec les nouvelles données.
         repo_projets.mettre_a_jour_txt_a_jour(
             connexion, id_projet, False
         )
@@ -287,10 +303,8 @@ def _importer_mode_remplacer(
         Statistiques d'import
     """
     # Étape 3.1 — Enregistrer l'import dans l'historique
-    """
-    On enregistre AVANT la suppression pour garder
-    une trace de l'opération même si quelque chose échoue.
-    """
+    # On enregistre AVANT la suppression pour garder
+    # une trace même si quelque chose échoue.
     repo_historique.inserer_historique(
         connexion,
         id_projet        = id_projet,
@@ -301,10 +315,8 @@ def _importer_mode_remplacer(
     )
 
     # Étape 3.2 — Supprimer toutes les catégories
-    """
-    ON DELETE CASCADE supprime automatiquement les notes
-    liées à chaque catégorie supprimée.
-    """
+    # ON DELETE CASCADE supprime automatiquement les notes
+    # liées à chaque catégorie supprimée.
     categories_existantes = (
         repo_categories.lister_categories_du_projet(
             connexion, id_projet
@@ -373,7 +385,7 @@ def _inserer_keynotes(
 ) -> dict:
     """
     Insère les catégories et notes parsées dans la BD.
-    Gère les doublons selon le paramètre ignorer_doublons.
+    Valide le format Revit — ignore les numéros non conformes.
 
     Args:
         connexion        : Connexion PostgreSQL active
@@ -393,12 +405,11 @@ def _inserer_keynotes(
     nb_notes = 0
 
     for item in keynotes_parsed:
-        # Insérer la catégorie
         numero_cat = item["numero_categorie"]
-        desc_cat = item["description_categorie"]
+        desc_cat   = item["description_categorie"]
 
         # Valider le format Revit du numéro de catégorie
-        # Les catégories non conformes sont ignorées avec un warning
+        # Les catégories non conformes sont ignorées avec warning
         if not valider_numero_categorie(numero_cat):
             logger.warning(
                 f"Import : numéro de catégorie '{numero_cat}' "
@@ -407,7 +418,7 @@ def _inserer_keynotes(
             )
             continue
 
-        # Vérifier si la catégorie existe déjà
+        # Vérifier si la catégorie existe déjà (mode fusion)
         if ignorer_doublons:
             numero_disponible = (
                 repo_categories
@@ -436,18 +447,16 @@ def _inserer_keynotes(
             effectue_par_id  = effectue_par_id,
             effectue_par_role= effectue_par_role,
             id_cible         = categorie["id"],
-            nouvelle_valeur  = (
-                f"{numero_cat} — {desc_cat}"
-            ),
+            nouvelle_valeur  = f"{numero_cat} — {desc_cat}",
         )
 
         # Insérer les notes de cette catégorie
         for note in item["notes"]:
             numero_note = note["numero"]
-            desc_note = note["description"]
+            desc_note   = note["description"]
 
             # Valider le format Revit du numéro de note
-            # Les notes non conformes sont ignorées avec un warning
+            # Les notes non conformes sont ignorées avec warning
             if not valider_numero_note(numero_note, numero_cat):
                 logger.warning(
                     f"Import : numéro de note '{numero_note}' "
@@ -455,7 +464,7 @@ def _inserer_keynotes(
                 )
                 continue
 
-            # Vérifier si la note existe déjà
+            # Vérifier si la note existe déjà (mode fusion)
             if ignorer_doublons:
                 numero_disponible = (
                     repo_notes.verifier_numero_note_unique(
@@ -484,9 +493,7 @@ def _inserer_keynotes(
                 effectue_par_id  = effectue_par_id,
                 effectue_par_role= effectue_par_role,
                 id_cible         = note_inseree["id"],
-                nouvelle_valeur  = (
-                    f"{numero_note} — {desc_note}"
-                ),
+                nouvelle_valeur  = f"{numero_note} — {desc_note}",
             )
 
     logger.info(
@@ -536,33 +543,26 @@ def _parser_fichier_txt(contenu_txt: str) -> list[dict]:
         )
 
     # Étape 4.2 — Parser chaque ligne
-    """
-    Chaque ligne a 3 colonnes séparées par tabulation :
-        Col 1 : numéro (catégorie ou note)
-        Col 2 : description
-        Col 3 : numéro parent (vide = catégorie, sinon note)
-    """
+    # Chaque ligne a 3 colonnes séparées par tabulation :
+    #   Col 1 : numéro (catégorie ou note)
+    #   Col 2 : description
+    #   Col 3 : numéro parent (vide = catégorie, sinon note)
     keynotes_par_categorie = {}
     ordre_categories = []
 
     for numero_ligne, ligne in enumerate(lignes, 1):
         colonnes = ligne.split(SEPARATEUR_COLONNES_TXT)
 
-        # Vérifier qu'il y a au moins 2 colonnes
         if len(colonnes) < 2:
             raise ValueError(
-                f"Format invalide à la ligne {numero_ligne}."
-                " Format attendu : numéro[TAB]description"
-                "[TAB]parent."
+                f"Format invalide à la ligne {numero_ligne}. "
+                "Format attendu : numéro[TAB]description[TAB]parent."
             )
 
-        numero = colonnes[0].strip()
+        numero      = colonnes[0].strip()
         description = colonnes[1].strip()
-        parent = colonnes[2].strip() if (
-            len(colonnes) > 2
-        ) else ""
+        parent      = colonnes[2].strip() if len(colonnes) > 2 else ""
 
-        # Valider que le numéro n'est pas vide
         if not numero or not description:
             raise ValueError(
                 f"Ligne {numero_ligne} : le numéro et "
@@ -572,9 +572,9 @@ def _parser_fichier_txt(contenu_txt: str) -> list[dict]:
         if parent == "":
             # Ligne sans parent = catégorie
             keynotes_par_categorie[numero] = {
-                "numero_categorie"    : numero,
+                "numero_categorie"     : numero,
                 "description_categorie": description,
-                "notes"               : [],
+                "notes"                : [],
             }
             ordre_categories.append(numero)
         else:
@@ -609,12 +609,8 @@ def _cle_tri_naturel(valeur: str) -> list:
         Liste utilisable comme clé de tri
     """
     # Étape 4.4 — Séparer les parties numériques et texte
-    """
-    re.split sépare la chaîne en alternant texte et chiffres.
-    Ex: "A-300" → ["A-", 300, ""]
-    Les parties numériques sont converties en int pour
-    un tri numérique correct.
-    """
+    # re.split sépare en alternant texte et chiffres.
+    # Ex: "A-300" → ["A-", 300, ""]
     parties = re.split(r"(\d+)", valeur.lower())
     return [
         int(partie) if partie.isdigit() else partie
