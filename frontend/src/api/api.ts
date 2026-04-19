@@ -114,26 +114,52 @@ export const projetsService = {
     api.put(`/projets/${id}`, data),
   delete: (id: number) => api.delete(`/projets/${id}`),
   exporter: async (id: number, nomProjet: string): Promise<void> => {
-    // Téléchargement direct — le backend retourne le fichier en binaire
+    // Étape 1 — Récupérer le fichier depuis le backend
     const token = localStorage.getItem('token');
     const reponse = await fetch(
       `${api.defaults.baseURL}/projets/${id}/exporter`,
       {
         method : 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       }
     );
     if (!reponse.ok) {
       throw new Error(`Erreur export : ${reponse.status}`);
     }
-    // Créer un lien temporaire pour déclencher le téléchargement
-    const blob = await reponse.blob();
+
+    const blob        = await reponse.blob();
+    const nomFichier  = `keynotes_${nomProjet.toLowerCase().replace(/\s+/g, '_')}.txt`;
+
+    // Étape 2 — Tenter l'API File System Access (Chrome/Edge)
+    // Affiche une vraie fenêtre "Enregistrer sous" Windows
+    // permettant à l'utilisateur de choisir le dossier exact.
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: nomFichier,
+          types: [{
+            description: 'Fichier Revit Keynotes',
+            accept     : { 'text/plain': ['.txt'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return;
+      } catch (erreur: any) {
+        // L'utilisateur a annulé la fenêtre — ne pas lancer d'erreur
+        if (erreur?.name === 'AbortError') return;
+        // Autre erreur — fallback vers téléchargement classique
+        console.warn('showSaveFilePicker échoué, fallback téléchargement:', erreur);
+      }
+    }
+
+    // Étape 3 — Fallback : téléchargement classique (Firefox, Safari)
+    // Le fichier est téléchargé dans le dossier Téléchargements
     const url  = window.URL.createObjectURL(blob);
     const lien = document.createElement('a');
     lien.href     = url;
-    lien.download = `keynotes_${nomProjet.toLowerCase().replace(/\s+/g, '_')}.txt`;
+    lien.download = nomFichier;
     document.body.appendChild(lien);
     lien.click();
     document.body.removeChild(lien);
