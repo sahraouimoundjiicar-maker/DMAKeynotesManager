@@ -40,8 +40,8 @@ interface PropsNotification {
 
 const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) => {
   React.useEffect(() => {
-    const minuterie = setTimeout(onClose, 4000);
-    return () => clearTimeout(minuterie); // Nettoyage si démonté avant 4 secondes
+    const minuterie = setTimeout(onClose, 6000);
+    return () => clearTimeout(minuterie); // Nettoyage si démonté avant 6 secondes
   }, [onClose]);
 
   return <div className={`notification ${type}`}>{message}</div>;
