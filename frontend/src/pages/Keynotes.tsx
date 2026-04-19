@@ -439,6 +439,7 @@ const Keynotes: React.FC = () => {
   // ============================================================
 
   function toggleProjet(idProjet: number) {
+    // Ouvrir/fermer le projet dans le tableau
     setEtatCollapse((prev) => ({
       ...prev,
       projetsCollapsed: {
@@ -446,6 +447,15 @@ const Keynotes: React.FC = () => {
         [idProjet]: !prev.projetsCollapsed[idProjet],
       },
     }));
+
+    // Si le projet n'a pas encore ses catégories chargées,
+    // les charger maintenant pour les afficher dans le tableau
+    const categoriesDejaChargees = categories.some(
+      (c) => c.id_projet === idProjet
+    );
+    if (!categoriesDejaChargees) {
+      chargerCategoriesEtNotes(idProjet);
+    }
   }
 
   function toggleCategorie(idCategorie: number) {
