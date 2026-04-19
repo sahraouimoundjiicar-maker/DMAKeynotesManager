@@ -40,6 +40,11 @@ from app.repositories import categories as repo_categories
 from app.repositories import notes as repo_notes
 from app.repositories import projets as repo_projets
 from app.repositories import historique as repo_historique
+from app.utils.revit_numerotation import (
+    valider_numero_categorie,
+    valider_numero_note,
+    message_range_invalide,
+)
 
 
 # Initialiser le logger pour ce module
@@ -392,6 +397,16 @@ def _inserer_keynotes(
         numero_cat = item["numero_categorie"]
         desc_cat = item["description_categorie"]
 
+        # Valider le format Revit du numéro de catégorie
+        # Les catégories non conformes sont ignorées avec un warning
+        if not valider_numero_categorie(numero_cat):
+            logger.warning(
+                f"Import : numéro de catégorie '{numero_cat}' "
+                "ignoré — format Revit non valide "
+                "(attendu : multiple de 100 ou cas fixes 000/020)."
+            )
+            continue
+
         # Vérifier si la catégorie existe déjà
         if ignorer_doublons:
             numero_disponible = (
@@ -430,6 +445,15 @@ def _inserer_keynotes(
         for note in item["notes"]:
             numero_note = note["numero"]
             desc_note = note["description"]
+
+            # Valider le format Revit du numéro de note
+            # Les notes non conformes sont ignorées avec un warning
+            if not valider_numero_note(numero_note, numero_cat):
+                logger.warning(
+                    f"Import : numéro de note '{numero_note}' "
+                    f"ignoré — {message_range_invalide(numero_cat)}"
+                )
+                continue
 
             # Vérifier si la note existe déjà
             if ignorer_doublons:

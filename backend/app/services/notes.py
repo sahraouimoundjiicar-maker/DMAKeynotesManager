@@ -28,6 +28,10 @@ from app.repositories import notes as repo_notes
 from app.repositories import categories as repo_categories
 from app.repositories import projets as repo_projets
 from app.repositories import historique as repo_historique
+from app.utils.revit_numerotation import (
+    valider_numero_note,
+    message_range_invalide,
+)
 
 
 # Initialiser le logger pour ce module
@@ -88,7 +92,19 @@ def creer_note(
                 "à ce projet."
             )
 
-        # Étape 1.2 — Vérifier l'unicité du numéro
+        # Étape 1.2 — Vérifier que le numéro respecte le format Revit
+        """
+        Le numéro de note doit être dans le range valide
+        de sa catégorie parente selon le format Revit keynotes.
+        Ex: catégorie "100" → notes "101" à "199"
+        Ex: catégorie "D200" → notes "D201" à "D299"
+        """
+        if not valider_numero_note(numero, categorie["numero"]):
+            raise ValueError(
+                message_range_invalide(categorie["numero"])
+            )
+
+        # Étape 1.3 — Vérifier l'unicité du numéro
         """
         Le numéro doit être unique dans tout le projet :
         pas de doublon ni avec les notes ni avec
@@ -105,7 +121,7 @@ def creer_note(
                 "dans ce projet."
             )
 
-        # Étape 1.3 — Créer la note
+        # Étape 1.4 — Créer la note
         note = repo_notes.inserer_note(
             connexion,
             id_projet,
@@ -115,7 +131,7 @@ def creer_note(
             id_createur,
         )
 
-        # Étape 1.4 — Enregistrer dans l'historique
+        # Étape 1.5 — Enregistrer dans l'historique
         repo_historique.inserer_historique(
             connexion,
             id_projet        = id_projet,
@@ -129,7 +145,7 @@ def creer_note(
             ),
         )
 
-        # Étape 1.5 — Marquer le fichier .txt comme périmé
+        # Étape 1.6 — Marquer le fichier .txt comme périmé
         repo_projets.mettre_a_jour_txt_a_jour(
             connexion, id_projet, False
         )
@@ -185,8 +201,24 @@ def modifier_note(
     connexion = creer_connexion()
 
     try:
-        # Étape 2.1 — Vérifier l'unicité du nouveau numéro
+        # Étape 2.1 — Valider le format Revit du nouveau numéro
         if nouveau_numero:
+            # Récupérer la catégorie de la note pour valider le range
+            note_actuelle = repo_notes.obtenir_note_par_id(
+                connexion, id_note
+            )
+            if note_actuelle:
+                categorie_note = repo_categories.obtenir_categorie_par_id(
+                    connexion, note_actuelle["id_categorie"]
+                )
+                if categorie_note and not valider_numero_note(
+                    nouveau_numero, categorie_note["numero"]
+                ):
+                    raise ValueError(
+                        message_range_invalide(categorie_note["numero"])
+                    )
+
+            # Vérifier l'unicité du nouveau numéro
             numero_disponible = (
                 repo_notes.verifier_numero_note_unique(
                     connexion,

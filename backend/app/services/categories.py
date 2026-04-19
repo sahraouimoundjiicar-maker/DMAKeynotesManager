@@ -24,6 +24,7 @@ from app.logger import get_logger
 from app.repositories import categories as repo_categories
 from app.repositories import projets as repo_projets
 from app.repositories import historique as repo_historique
+from app.utils.revit_numerotation import valider_numero_categorie
 
 
 # Initialiser le logger pour ce module
@@ -71,7 +72,21 @@ def creer_categorie(
                 f"Projet {id_projet} introuvable."
             )
 
-        # Étape 1.2 — Vérifier l'unicité du numéro
+        # Étape 1.2 — Valider le format Revit du numéro de catégorie
+        """
+        Le numéro de catégorie doit respecter le format Revit :
+        - Multiples de 100 : 100, 200, 300...
+        - Avec préfixe    : D100, D200, D300...
+        - Cas fixes       : 000, 020
+        """
+        if not valider_numero_categorie(numero):
+            raise ValueError(
+                f"Le numéro de catégorie '{numero}' n'est pas valide. "
+                "Format accepté : multiple de 100 (ex: 100, 200, D200) "
+                "ou cas fixes 000 et 020."
+            )
+
+        # Étape 1.3 — Vérifier l'unicité du numéro
         """
         Le numéro doit être unique dans tout le projet :
         pas de doublon ni avec les catégories ni avec
@@ -88,7 +103,7 @@ def creer_categorie(
                 "dans ce projet."
             )
 
-        # Étape 1.3 — Créer la catégorie
+        # Étape 1.4 — Créer la catégorie
         categorie = repo_categories.inserer_categorie(
             connexion,
             id_projet,
@@ -97,7 +112,7 @@ def creer_categorie(
             id_createur,
         )
 
-        # Étape 1.4 — Enregistrer dans l'historique
+        # Étape 1.5 — Enregistrer dans l'historique
         repo_historique.inserer_historique(
             connexion,
             id_projet        = id_projet,
@@ -111,7 +126,7 @@ def creer_categorie(
             ),
         )
 
-        # Étape 1.5 — Marquer le fichier .txt comme périmé
+        # Étape 1.6 — Marquer le fichier .txt comme périmé
         repo_projets.mettre_a_jour_txt_a_jour(
             connexion, id_projet, False
         )
@@ -166,8 +181,16 @@ def modifier_categorie(
     connexion = creer_connexion()
 
     try:
-        # Étape 2.1 — Vérifier l'unicité du nouveau numéro
+        # Étape 2.1 — Valider le format Revit du nouveau numéro
         if nouveau_numero:
+            if not valider_numero_categorie(nouveau_numero):
+                raise ValueError(
+                    f"Le numéro de catégorie '{nouveau_numero}' n'est pas valide. "
+                    "Format accepté : multiple de 100 (ex: 100, 200, D200) "
+                    "ou cas fixes 000 et 020."
+                )
+
+            # Vérifier l'unicité du nouveau numéro
             numero_disponible = (
                 repo_categories
                 .verifier_numero_categorie_unique(
