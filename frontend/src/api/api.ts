@@ -113,7 +113,32 @@ export const projetsService = {
   update: (id: number, data: { nouveau_nom?: string; chemin_export?: string }) =>
     api.put(`/projets/${id}`, data),
   delete: (id: number) => api.delete(`/projets/${id}`),
-  exporter: (id: number) => api.get(`/projets/${id}/exporter`),
+  exporter: async (id: number, nomProjet: string): Promise<void> => {
+    // Téléchargement direct — le backend retourne le fichier en binaire
+    const token = localStorage.getItem('token');
+    const reponse = await fetch(
+      `${api.defaults.baseURL}/projets/${id}/exporter`,
+      {
+        method : 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    );
+    if (!reponse.ok) {
+      throw new Error(`Erreur export : ${reponse.status}`);
+    }
+    // Créer un lien temporaire pour déclencher le téléchargement
+    const blob = await reponse.blob();
+    const url  = window.URL.createObjectURL(blob);
+    const lien = document.createElement('a');
+    lien.href     = url;
+    lien.download = `keynotes_${nomProjet.toLowerCase().replace(/\s+/g, '_')}.txt`;
+    document.body.appendChild(lien);
+    lien.click();
+    document.body.removeChild(lien);
+    window.URL.revokeObjectURL(url);
+  },
   importer: (id: number, data: {
     mode        : 'remplacer' | 'fusionner';
     contenu_txt : string;

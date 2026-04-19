@@ -638,8 +638,12 @@ const Projets: React.FC = () => {
     }
     try {
       afficherNotification(`Export du projet "${projetSelectionne.nom}" en cours...`, 'info');
-      await projetsService.exporter(projetSelectionne.id);
-      afficherNotification(`Projet "${projetSelectionne.nom}" exporté avec succès`, 'success');
+      // Le téléchargement se déclenche automatiquement dans le navigateur
+      await projetsService.exporter(projetSelectionne.id, projetSelectionne.nom);
+      afficherNotification(
+        `Fichier "${projetSelectionne.nom}" téléchargé avec succès`,
+        'success'
+      );
       // Recharge pour mettre à jour txt_a_jour et date_dernier_export
       await chargerProjets();
     } catch (erreur) {

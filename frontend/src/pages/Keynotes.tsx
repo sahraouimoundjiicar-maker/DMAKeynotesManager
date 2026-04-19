@@ -974,8 +974,11 @@ const Keynotes: React.FC = () => {
     }
     try {
       afficherNotification('Export en cours...', 'info');
-      await projetsService.exporter(idProjetSelectionne);
-      afficherNotification('Export réalisé avec succès', 'success');
+      // Récupérer le nom du projet pour le nom du fichier téléchargé
+      const projetActuel = projets.find((p) => p.id === idProjetSelectionne);
+      const nomProjet = projetActuel?.nom ?? 'projet';
+      await projetsService.exporter(idProjetSelectionne, nomProjet);
+      afficherNotification('Fichier téléchargé avec succès', 'success');
     } catch (erreur) {
       console.error('Erreur export:', erreur);
       afficherNotification("Erreur lors de l'export", 'error');
@@ -1364,12 +1367,12 @@ const Keynotes: React.FC = () => {
             {/* Largeur fixe pour la colonne N° — évite que les numéros longs
                 élargissent la colonne et décalent tout le tableau */}
             <colgroup>
-              <col style={{ width: '80px', minWidth: '80px' }} />
+              <col style={{ width: '120px', minWidth: '120px' }} />
               <col />
             </colgroup>
             <thead>
               <tr>
-                <th style={{ width: '80px' }}>N°</th>
+                <th style={{ width: '120px' }}>N°</th>
                 <th>Description</th>
               </tr>
             </thead>
