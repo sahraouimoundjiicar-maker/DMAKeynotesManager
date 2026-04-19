@@ -99,6 +99,126 @@ function trierParNumero<T extends { numero: string }>(liste: T[]): T[] {
 }
 
 // ============================================================
+// SECTION 2B — LOGIQUE NUMÉROTATION REVIT
+//
+// Règles du format Revit keynotes :
+//   - Catégorie "000" → notes "001" à "019"
+//   - Catégorie "020" → notes "021" à "099"
+//   - Catégorie "100" → notes "101" à "199"
+//   - Catégorie "D200" → notes "D201" à "D299"
+//   - Règle générale : préfixe + numéro entre x01 et x99
+// ============================================================
+
+// Cas fixes pour les catégories spéciales 000 et 020
+const RANGES_FIXES: Record<string, { min: number; max: number }> = {
+  '000': { min: 1,  max: 19  }, // 001 à 019
+  '020': { min: 21, max: 99  }, // 021 à 099
+};
+
+/**
+ * Calcule le range valide pour les notes d'une catégorie.
+ * Retourne { prefixe, min, max } pour valider et générer les numéros.
+ *
+ * Ex: "100"  → { prefixe: "",  base: 100, min: 101, max: 199 }
+ * Ex: "D200" → { prefixe: "D", base: 200, min: 201, max: 299 }
+ * Ex: "000"  → { prefixe: "",  base: 0,   min: 1,   max: 19  }
+ */
+function calculerRangeNote(numeroCategorie: string): {
+  prefixe : string;
+  base    : number;
+  min     : number;
+  max     : number;
+} | null {
+  const numeroBrut = numeroCategorie.trim().toUpperCase();
+
+  // Cas fixes : 000 et 020
+  if (RANGES_FIXES[numeroBrut]) {
+    return {
+      prefixe : '',
+      base    : parseInt(numeroBrut, 10),
+      min     : RANGES_FIXES[numeroBrut].min,
+      max     : RANGES_FIXES[numeroBrut].max,
+    };
+  }
+
+  // Cas général : extraire le préfixe alphabétique et la base numérique
+  // Ex: "D200" → prefixe="D", base=200
+  // Ex: "500"  → prefixe="",  base=500
+  const match = numeroBrut.match(/^([A-Z]*)(\d+)$/);
+  if (!match) return null;
+
+  const prefixe = match[1]; // "D" ou ""
+  const base    = parseInt(match[2], 10); // 200, 500, etc.
+
+  return {
+    prefixe,
+    base,
+    min : base + 1,   // 201, 501, etc.
+    max : base + 99,  // 299, 599, etc.
+  };
+}
+
+/**
+ * Vérifie si un numéro de note respecte le range de sa catégorie.
+ * Retourne true si valide, false sinon.
+ */
+function validerNumeroNote(
+  numeroNote      : string,
+  numeroCategorie : string
+): boolean {
+  const range = calculerRangeNote(numeroCategorie);
+  if (!range) return false;
+
+  const numeroBrut = numeroNote.trim().toUpperCase();
+
+  // Vérifier que le préfixe correspond
+  if (!numeroBrut.startsWith(range.prefixe)) return false;
+
+  // Extraire la partie numérique
+  const partieNumerique = numeroBrut.slice(range.prefixe.length);
+  const valeur = parseInt(partieNumerique, 10);
+  if (isNaN(valeur)) return false;
+
+  return valeur >= range.min && valeur <= range.max;
+}
+
+/**
+ * Génère le prochain numéro disponible pour une catégorie.
+ * Si tous les numéros sont pris, retourne null.
+ *
+ * Ex: catégorie "100", notes existantes ["101","102"] → "103"
+ * Ex: catégorie "D200", notes existantes ["D201"]     → "D202"
+ */
+function genererProchainNumeroNote(
+  numeroCategorie  : string,
+  numerosExistants : string[]
+): string | null {
+  const range = calculerRangeNote(numeroCategorie);
+  if (!range) return null;
+
+  // Construire l'ensemble des numéros déjà pris (en majuscules)
+  const numerosExistantsMaj = new Set(
+    numerosExistants.map((n) => n.trim().toUpperCase())
+  );
+
+  // Trouver le premier numéro disponible dans le range
+  for (let valeur = range.min; valeur <= range.max; valeur++) {
+    // Formater avec padding : 001, 002... ou D201, D202...
+    const nombreFormate = String(valeur).padStart(
+      String(range.base + 99).length, // longueur basée sur le max
+      '0'
+    );
+    const numeroCandidat = `${range.prefixe}${nombreFormate}`;
+
+    if (!numerosExistantsMaj.has(numeroCandidat)) {
+      return numeroCandidat;
+    }
+  }
+
+  return null; // Plus de numéros disponibles
+}
+
+// ============================================================
 // SECTION 3 — SOUS-COMPOSANT : Notification
 // ============================================================
 
@@ -494,7 +614,21 @@ const Keynotes: React.FC = () => {
     setModeCategorie('lecture');
     setModeNote('creation');
     setFormCategorie({ numero: categorie.numero, description: categorie.description });
-    setFormNote(FORM_NOTE_VIDE);
+
+    // Générer automatiquement le prochain numéro de note disponible
+    // pour cette catégorie selon le format Revit
+    const notesCategorie = notesParCategorie[categorie.id] ?? [];
+    const numerosExistants = notesCategorie.map((n) => n.numero);
+    const prochainNumero = genererProchainNumeroNote(
+      categorie.numero,
+      numerosExistants
+    );
+    setFormNote({
+      ...FORM_NOTE_VIDE,
+      idCategorie: categorie.id,
+      numero: prochainNumero ?? '',
+    });
+
     setTexteRecherche(`${categorie.numero} — ${categorie.description}`);
 
     // Ouvre la catégorie dans le tableau
@@ -670,6 +804,27 @@ const Keynotes: React.FC = () => {
       afficherNotification('Le numéro de la note est obligatoire', 'error');
       return;
     }
+
+    // Valider que le numéro respecte le format Revit de la catégorie
+    const categorieNote = categories.find((c) => c.id === formNote.idCategorie);
+    if (categorieNote) {
+      const numeroValide = validerNumeroNote(
+        formNote.numero.trim(),
+        categorieNote.numero
+      );
+      if (!numeroValide) {
+        const range = calculerRangeNote(categorieNote.numero);
+        const rangeTexte = range
+          ? `${range.prefixe}${String(range.min).padStart(String(range.base + 99).length, '0')} à ${range.prefixe}${String(range.max).padStart(String(range.base + 99).length, '0')}`
+          : 'invalide';
+        afficherNotification(
+          `Numéro invalide. Pour la catégorie "${categorieNote.numero}", le range valide est : ${rangeTexte}`,
+          'error'
+        );
+        return;
+      }
+    }
+
     if (!formNote.description.trim()) {
       afficherNotification('La description de la note est obligatoire', 'error');
       return;
