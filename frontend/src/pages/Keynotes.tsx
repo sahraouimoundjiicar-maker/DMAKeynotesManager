@@ -1015,15 +1015,11 @@ const Keynotes: React.FC = () => {
                     }}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
-                      // Double-clic sur la catégorie → sélectionne dans le formulaire
-                      if (idProjetSelectionne === categorie.id_projet) {
-                        selectionnerCategorie(categorie);
-                      } else {
-                        afficherNotification(
-                          'Sélectionnez d\'abord ce projet dans le menu déroulant',
-                          'warning'
-                        );
+                      // Sélectionne automatiquement le projet si pas encore sélectionné
+                      if (idProjetSelectionne !== categorie.id_projet) {
+                        setIdProjetSelectionne(categorie.id_projet);
                       }
+                      selectionnerCategorie(categorie);
                     }}
                   >
                     <td colSpan={2}>
@@ -1045,14 +1041,11 @@ const Keynotes: React.FC = () => {
                         style={{ cursor: 'pointer' }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (idProjetSelectionne === note.id_projet) {
-                            selectionnerNote(note);
-                          } else {
-                            afficherNotification(
-                              'Sélectionnez d\'abord ce projet dans le menu déroulant',
-                              'warning'
-                            );
+                          // Sélectionne automatiquement le projet si pas encore sélectionné
+                          if (idProjetSelectionne !== note.id_projet) {
+                            setIdProjetSelectionne(note.id_projet);
                           }
+                          selectionnerNote(note);
                         }}
                       >
                         <td>{note.numero}</td>
@@ -1347,12 +1340,12 @@ const Keynotes: React.FC = () => {
             {/* Largeur fixe pour la colonne N° — évite que les numéros longs
                 élargissent la colonne et décalent tout le tableau */}
             <colgroup>
-              <col style={{ width: '40px', minWidth: '40px' }} />
+              <col style={{ width: '120px', minWidth: '120px' }} />
               <col />
             </colgroup>
             <thead>
               <tr>
-                <th style={{ width: '40px' }}>N°</th>
+                <th style={{ width: '120px' }}>N°</th>
                 <th>Description</th>
               </tr>
             </thead>
