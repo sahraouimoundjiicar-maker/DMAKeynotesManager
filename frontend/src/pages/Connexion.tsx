@@ -203,28 +203,48 @@ const Connexion: React.FC = () => {
 
   // ============================================================
   // SECTION 8 — CONNEXION
+  //
+  // Flux :
+  //   1. Validation locale des champs (email + mot de passe)
+  //   2. Appel API POST /auth/login
+  //   3. Stockage du token JWT et du rôle dans localStorage
+  //   4. Redirection selon le rôle :
+  //        - super_admin → /utilisateurs
+  //        - utilisateur → /keynotes
+  //
+  // Gestion des erreurs :
+  //   - Compte en attente : notification warning (orange) — reste jusqu'au clic ✖
+  //   - Autres erreurs    : notification error (rouge)   — reste jusqu'au clic ✖
+  //
+  // Sécurité :
+  //   On ne distingue PAS "email inconnu" de "mot de passe incorrect"
+  //   pour éviter la faille user enumeration (un attaquant ne doit pas
+  //   savoir si un email existe dans la base de données).
   // ============================================================
 
   async function handleLogin() {
+    // Étape 1 — Validation locale avant tout appel réseau
     if (!validerConnexion()) return;
 
     setIsLoading(true);
+
     try {
+      // Étape 2 — Appel API de connexion
       const reponse = await authService.connexion({
-        email: email.trim(),
-        mot_de_passe: password,
+        email        : email.trim(),
+        mot_de_passe : password,
       });
 
       if (reponse.data?.access_token) {
-        localStorage.setItem('token', reponse.data.access_token);
-        localStorage.setItem('user_role', reponse.data.role || 'utilisateur');
+        // Étape 3 — Stocker les données de session dans localStorage
+        localStorage.setItem('token',      reponse.data.access_token);
+        localStorage.setItem('user_role',  reponse.data.role || 'utilisateur');
         localStorage.setItem('user_email', email.trim());
 
         afficherNotification('Connexion réussie ! Bienvenue', 'success');
 
-        // Redirige selon le rôle :
-        // - super_admin → page Utilisateurs
-        // - utilisateur → page Keynotes
+        // Étape 4 — Rediriger selon le rôle après un court délai
+        // (laisser le temps à l'utilisateur de voir la notification de succès)
         const role = reponse.data.role || 'utilisateur';
         setTimeout(() => {
           if (role === 'super_admin') {
@@ -233,23 +253,44 @@ const Connexion: React.FC = () => {
             navigate('/keynotes');
           }
         }, 1500);
+
       } else {
-        afficherNotification('Réponse du serveur invalide', 'error');
+        // Cas anormal : token absent dans la réponse
+        afficherNotification('Réponse du serveur invalide. Veuillez réessayer.', 'error');
       }
 
     } catch (erreur: any) {
+      // Étape 5 — Gestion des erreurs API
       console.error('Erreur connexion:', erreur);
-      const messageErreur = extraireMessageErreurApi(
+
+      // Extraire le message retourné par le backend
+      let messageErreur = extraireMessageErreurApi(
         erreur,
         'Erreur de connexion. Veuillez réessayer.'
       );
-      const typeErreur: TypeNotification =
-        messageErreur.toLowerCase().includes('attente') ||
-        messageErreur.toLowerCase().includes('approbation')
-          ? 'warning'
-          : 'error';
-      afficherNotification(messageErreur, typeErreur);
+
+      // Personnaliser le message selon le type d'erreur :
+      // - Compte en attente → warning orange (cas légitime à distinguer)
+      // - Toutes les autres erreurs → message générique pour éviter
+      //   de révéler si l'email existe ou non dans la base (user enumeration)
+      const messageLower = messageErreur.toLowerCase();
+
+      if (messageLower.includes('attente') || messageLower.includes('approbation')) {
+        // Compte existant mais pas encore approuvé par le super_admin
+        afficherNotification(
+          "Compte en attente d'approbation. Veuillez patienter jusqu'à validation par l'administrateur.",
+          'warning'
+        );
+      } else {
+        // Identifiants incorrects ou autre erreur serveur
+        afficherNotification(
+          'Email ou mot de passe incorrect. Veuillez réessayer.',
+          'error'
+        );
+      }
+
     } finally {
+      // Toujours réactiver le bouton, que la connexion ait réussi ou échoué
       setIsLoading(false);
     }
   }
