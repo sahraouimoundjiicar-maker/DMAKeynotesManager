@@ -945,6 +945,11 @@ h2 {
     padding-left: 8px;
 }
 
+.data-table td:first-child {
+    text-align: left;
+    padding-left: 8px;
+}
+
 .data-table tbody tr:hover td {
     background-color: #f0f2f5;
     cursor: pointer;
