@@ -117,6 +117,14 @@ h2 {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+/* Page connexion — désactiver le transform hover
+   pour éviter de couper le bouton et le lien */
+.container-login .cell:hover {
+    transform: none;
+    background-color: #f8f9fa;
+    box-shadow: none;
+}
+
 .cell-span-2 {
     grid-column: span 2;
     background-color: #f8f9fa;
