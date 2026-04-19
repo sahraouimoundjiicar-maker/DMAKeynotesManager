@@ -597,8 +597,7 @@ h2 {
     gap: 12px;
     justify-content: center;
     align-items: center;
-    height: 100%;
-    margin-top: 0;
+    margin-top: 16px;
 }
 
 .btn {
