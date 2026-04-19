@@ -244,6 +244,9 @@ const Projets: React.FC = () => {
 
   // --- États des champs de recherche ---
   const [rechercheProjet, setRechercheProjet] = useState('');
+  // Bloque l'affichage des suggestions après sélection d'un projet
+  // depuis le tableau — évite la fenêtre flottante indésirable
+  const [suggestionsProjetsBloquees, setSuggestionsProjetsBloquees] = useState(false);
   const [rechercheUtilisateur, setRechercheUtilisateur] = useState('');
 
   // Utilisateur sélectionné dans le champ recherche (avant ajout)
@@ -262,7 +265,7 @@ const Projets: React.FC = () => {
 
   // Suggestions pour la recherche de projet (filtre sur la liste chargée)
   const suggestionsProjet: Projet[] =
-    rechercheProjet.trim().length >= 2
+    !suggestionsProjetsBloquees && rechercheProjet.trim().length >= 2
       ? projets
           .filter((p) => normaliserChaine(p.nom).includes(normaliserChaine(rechercheProjet)))
           .slice(0, 10)
@@ -396,6 +399,7 @@ const Projets: React.FC = () => {
     setModeFormulaire('creation');
     setProjetSelectionne(null);
     setFormulaire(ETAT_FORMULAIRE_VIDE); // nomProjet + cheminExport vides
+    setSuggestionsProjetsBloquees(false);
     setUtilisateursAcces([]);
     setRechercheProjet('');
     setRechercheUtilisateur('');
@@ -411,6 +415,9 @@ const Projets: React.FC = () => {
       cheminExport : projet.chemin_export ?? '',
     });
     setRechercheProjet(projet.nom);
+    // Bloquer les suggestions pour éviter la fenêtre flottante
+    // après sélection depuis le tableau ou depuis une suggestion
+    setSuggestionsProjetsBloquees(true);
     setRechercheUtilisateur('');
     setUtilisateurEnAttente(null);
     // Charge les utilisateurs ayant accès à ce projet depuis l'API
@@ -874,6 +881,8 @@ const Projets: React.FC = () => {
                   )}
                   onChangement={(valeur) => {
                     setRechercheProjet(valeur);
+                    // Débloquer les suggestions quand l'utilisateur tape
+                    setSuggestionsProjetsBloquees(false);
                     // Si le champ est vidé, repasse en mode création
                     if (valeur.trim() === '') activerModeCreation();
                   }}
