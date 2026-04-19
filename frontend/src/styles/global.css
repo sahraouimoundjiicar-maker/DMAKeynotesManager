@@ -1069,7 +1069,11 @@ h2 {
     position: fixed;
     top: 20px;
     right: 20px;
-    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
     border-radius: 8px;
     color: white;
     font-size: 15px;
@@ -1077,7 +1081,7 @@ h2 {
     z-index: 9999;
     animation: slideIn 0.3s ease;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-    min-width: 300px;
+    min-width: 320px;
     max-width: 500px;
     line-height: 1.5;
 }
@@ -1097,6 +1101,25 @@ h2 {
 
 .notification.info {
     background-color: #17a2b8;
+}
+
+/* Bouton ✖ pour fermer les notifications error et warning */
+.notification-close {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 0;
+    line-height: 1;
+    flex-shrink: 0;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.notification-close:hover {
+    opacity: 1;
 }
 
 @keyframes slideIn {

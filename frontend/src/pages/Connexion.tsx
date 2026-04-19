@@ -28,8 +28,8 @@ const ERREURS_VIDES: EtatErreurs = {
 
 // ============================================================
 // SECTION 2 — SOUS-COMPOSANT : Notification
-// Utilise useEffect pour nettoyer le setTimeout proprement
-// et éviter les fuites mémoire si le composant est démonté.
+// - error / warning : reste jusqu'au clic sur ✖
+// - success / info  : disparaît automatiquement après 5 secondes
 // ============================================================
 
 interface PropsNotification {
@@ -39,12 +39,28 @@ interface PropsNotification {
 }
 
 const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) => {
+  // Fermeture automatique uniquement pour success et info
   React.useEffect(() => {
-    const minuterie = setTimeout(onClose, 10000);
-    return () => clearTimeout(minuterie);
-  }, [onClose]);
+    if (type === 'success' || type === 'info') {
+      const minuterie = setTimeout(onClose, 5000);
+      return () => clearTimeout(minuterie);
+    }
+  }, [type, onClose]);
 
-  return <div className={`notification ${type}`}>{message}</div>;
+  return (
+    <div className={`notification ${type}`}>
+      <span>{message}</span>
+      {(type === 'error' || type === 'warning') && (
+        <button
+          onClick={onClose}
+          aria-label="Fermer"
+          className="notification-close"
+        >
+          ✖
+        </button>
+      )}
+    </div>
+  );
 };
 
 // ============================================================
@@ -54,23 +70,14 @@ const Notification: React.FC<PropsNotification> = ({ message, type, onClose }) =
 const Connexion: React.FC = () => {
   const navigate = useNavigate();
 
-  // --- Mode du formulaire ---
   const [isRegisterMode, setIsRegisterMode] = useState(false);
-
-  // --- Champs du formulaire ---
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
-  // --- État de chargement ---
   const [isLoading, setIsLoading] = useState(false);
-
-  // --- Erreurs de validation ---
   const [errors, setErrors] = useState<EtatErreurs>(ERREURS_VIDES);
-
-  // --- Notification (clé unique pour forcer le re-montage à chaque nouvelle notification) ---
   const [notification, setNotification] = useState<{
     message: string;
     type: TypeNotification;
@@ -96,14 +103,11 @@ const Connexion: React.FC = () => {
 
   // ============================================================
   // SECTION 5 — BASCULEMENT CONNEXION ↔ INSCRIPTION
-  // Réinitialise tous les champs et toutes les erreurs
-  // pour éviter un état incohérent entre les deux modes.
   // ============================================================
 
   function basculerMode() {
     setIsRegisterMode((prev) => !prev);
     effacerErreurs();
-    // Réinitialise tous les champs — pas seulement ceux spécifiques à l'inscription
     setNom('');
     setPrenom('');
     setEmail('');
@@ -186,7 +190,6 @@ const Connexion: React.FC = () => {
 
   // ============================================================
   // SECTION 7 — EXTRACTION DU MESSAGE D'ERREUR API
-  // Centralisé pour éviter la duplication dans handleLogin/handleRegister.
   // ============================================================
 
   function extraireMessageErreurApi(erreur: any, messageParDefaut: string): string {
@@ -220,8 +223,8 @@ const Connexion: React.FC = () => {
         afficherNotification('Connexion réussie ! Bienvenue', 'success');
 
         // Redirige selon le rôle :
-        // - super_admin → page Utilisateurs (gestion de l'équipe)
-        // - utilisateur → page Keynotes (accès aux keynotes)
+        // - super_admin → page Utilisateurs
+        // - utilisateur → page Keynotes
         const role = reponse.data.role || 'utilisateur';
         setTimeout(() => {
           if (role === 'super_admin') {
@@ -236,19 +239,15 @@ const Connexion: React.FC = () => {
 
     } catch (erreur: any) {
       console.error('Erreur connexion:', erreur);
-
       const messageErreur = extraireMessageErreurApi(
         erreur,
         'Erreur de connexion. Veuillez réessayer.'
       );
-
-      // Affiche en "warning" si le compte est en attente d'approbation
       const typeErreur: TypeNotification =
         messageErreur.toLowerCase().includes('attente') ||
         messageErreur.toLowerCase().includes('approbation')
           ? 'warning'
           : 'error';
-
       afficherNotification(messageErreur, typeErreur);
     } finally {
       setIsLoading(false);
@@ -272,13 +271,11 @@ const Connexion: React.FC = () => {
         confirmer_mot_de_passe: confirmPassword,
       });
 
-      // Une seule notification — claire et suffisante
       afficherNotification(
         "Inscription réussie ! Votre compte est en attente d'approbation par l'administrateur.",
         'success'
       );
 
-      // Réinitialise le formulaire et repasse en mode connexion après 2 secondes
       setTimeout(() => {
         setIsRegisterMode(false);
         setNom('');
@@ -321,7 +318,6 @@ const Connexion: React.FC = () => {
   return (
     <div className="container-login">
 
-      {/* Notification flottante — re-montée à chaque nouvelle via la clé */}
       {notification && (
         <Notification
           key={notification.cle}
@@ -340,10 +336,7 @@ const Connexion: React.FC = () => {
           <div className="grid-1x1">
             <div className="cell">
 
-              {/* Champs Nom + Prénom — visibles uniquement en mode inscription */}
-              <div
-                className={`register-fields register-fields-top ${isRegisterMode ? 'expanded' : ''}`}
-              >
+              <div className={`register-fields register-fields-top ${isRegisterMode ? 'expanded' : ''}`}>
                 <div>
                   <div className="form-group">
                     <label className="cell-title">
@@ -357,9 +350,7 @@ const Connexion: React.FC = () => {
                       onChange={(e) => setNom(e.target.value)}
                       disabled={isLoading}
                     />
-                    {errors.nom && (
-                      <span className="error-message">{errors.nom}</span>
-                    )}
+                    {errors.nom && <span className="error-message">{errors.nom}</span>}
                   </div>
 
                   <div className="form-group">
@@ -374,14 +365,11 @@ const Connexion: React.FC = () => {
                       onChange={(e) => setPrenom(e.target.value)}
                       disabled={isLoading}
                     />
-                    {errors.prenom && (
-                      <span className="error-message">{errors.prenom}</span>
-                    )}
+                    {errors.prenom && <span className="error-message">{errors.prenom}</span>}
                   </div>
                 </div>
               </div>
 
-              {/* Email — toujours visible */}
               <div className="form-group form-group-email">
                 <label className="cell-title">
                   Email <span style={{ color: '#dc3545' }}>*</span>
@@ -394,12 +382,9 @@ const Connexion: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
                 />
-                {errors.email && (
-                  <span className="error-message">{errors.email}</span>
-                )}
+                {errors.email && <span className="error-message">{errors.email}</span>}
               </div>
 
-              {/* Mot de passe — toujours visible */}
               <div className="form-group form-group-password">
                 <label className="cell-title">
                   Mot de passe <span style={{ color: '#dc3545' }}>*</span>
@@ -413,20 +398,14 @@ const Connexion: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
                 />
-                {errors.password && (
-                  <span className="error-message">{errors.password}</span>
-                )}
+                {errors.password && <span className="error-message">{errors.password}</span>}
               </div>
 
-              {/* Confirmation mot de passe — visible uniquement en mode inscription */}
-              <div
-                className={`register-fields register-fields-bottom ${isRegisterMode ? 'expanded' : ''}`}
-              >
+              <div className={`register-fields register-fields-bottom ${isRegisterMode ? 'expanded' : ''}`}>
                 <div>
                   <div className="form-group">
                     <label className="cell-title">
-                      Confirmer le mot de passe{' '}
-                      <span style={{ color: '#dc3545' }}>*</span>
+                      Confirmer le mot de passe <span style={{ color: '#dc3545' }}>*</span>
                     </label>
                     <input
                       type="password"
@@ -437,33 +416,19 @@ const Connexion: React.FC = () => {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       disabled={isLoading}
                     />
-                    {errors.confirmPassword && (
-                      <span className="error-message">{errors.confirmPassword}</span>
-                    )}
+                    {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
                   </div>
                 </div>
               </div>
 
-              {/* Bouton de soumission */}
               <div className="button-group">
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={isLoading}
-                >
-                  {isLoading
-                    ? 'Chargement...'
-                    : isRegisterMode
-                    ? "S'inscrire"
-                    : 'Se connecter'}
+                <button type="submit" className="btn btn-primary" disabled={isLoading}>
+                  {isLoading ? 'Chargement...' : isRegisterMode ? "S'inscrire" : 'Se connecter'}
                 </button>
               </div>
 
-              {/* Lien pour basculer entre connexion et inscription */}
               <div className="switch-mode">
-                <span>
-                  {isRegisterMode ? 'Déjà un compte ? ' : 'Nouveau ? '}
-                </span>
+                <span>{isRegisterMode ? 'Déjà un compte ? ' : 'Nouveau ? '}</span>
                 <span className="switch-link" onClick={basculerMode}>
                   {isRegisterMode ? 'Se connecter' : 'Enregistrez-vous'}
                 </span>
