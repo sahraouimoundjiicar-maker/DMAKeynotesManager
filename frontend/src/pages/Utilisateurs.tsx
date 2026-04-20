@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { utilisateursService } from '../api/api';
+import { utilisateursService, projetsService, accesService } from '../api/api';
 
 // ============================================================
 // SECTION 1 — TYPES
@@ -45,14 +45,11 @@ const ETAT_FORMULAIRE_VIDE: EtatFormulaire = {
   statut: '',
 };
 
-// Liste fixe des projets disponibles (sera remplacée par un appel API plus tard)
-const TOUS_LES_PROJETS: string[] = [
-  'Projet Alpha',
-  'Projet Beta',
-  'Projet Gamma',
-  'Projet Delta',
-  'Projet Epsilon',
-];
+// Interface pour les projets chargés depuis l'API
+interface ProjetAcces {
+  id  : number;
+  nom : string;
+}
 
 // Ordre de tri pour les rôles et statuts dans le tableau
 const ORDRE_ROLE: Record<string, number> = { super_admin: 1, utilisateur: 2 };
@@ -236,27 +233,23 @@ const Utilisateurs: React.FC = () => {
   const navigate = useNavigate();
 
   // --- États principaux ---
-  const [utilisateurs, setUtilisateurs] = useState<Utilisateur[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [utilisateurs, setUtilisateurs]     = useState<Utilisateur[]>([]);
+  const [tousLesProjets, setTousLesProjets] = useState<ProjetAcces[]>([]);
+  const [isLoading, setIsLoading]           = useState(true);
 
   // --- État du formulaire (champs contrôlés) ---
-  const [formulaire, setFormulaire] = useState<EtatFormulaire>(ETAT_FORMULAIRE_VIDE);
-  const [modeFormulaire, setModeFormulaire] = useState<ModeFormulaire>('creation');
+  const [formulaire, setFormulaire]                         = useState<EtatFormulaire>(ETAT_FORMULAIRE_VIDE);
+  const [modeFormulaire, setModeFormulaire]                 = useState<ModeFormulaire>('creation');
   const [utilisateurSelectionne, setUtilisateurSelectionne] = useState<Utilisateur | null>(null);
 
-  // Projets en cours d'édition (mode création ou mode édition)
-  const [projetsEnEdition, setProjetsEnEdition] = useState<string[]>([]);
+  // Projets de l'utilisateur — chargés depuis l'API à la sélection
+  // Chaque projet a un ID pour appeler accesService.attribuer/retirer
+  const [projetsEnEdition, setProjetsEnEdition] = useState<ProjetAcces[]>([]);
+  const [projetEnAttente, setProjetEnAttente]   = useState<ProjetAcces | null>(null);
 
   // --- États des champs de recherche ---
-  const [rechercheFilterProjet, setRechercheFilterProjet] = useState('');
   const [rechercheUtilisateur, setRechercheUtilisateur] = useState('');
-  const [rechercheProjet, setRechercheProjet] = useState('');
-
-  // Projet sélectionné dans le champ "Rechercher projet" (avant ajout)
-  const [projetEnAttente, setProjetEnAttente] = useState<string | null>(null);
-
-  // Filtre actif sur le tableau (utilisé dans le champ "Filtrer par projet")
-  const [filtreProjetActif, setFiltreProjetActif] = useState<string | null>(null);
+  const [rechercheProjet, setRechercheProjet]           = useState('');
 
   // --- État des notifications ---
   const [notification, setNotification] = useState<{
@@ -268,14 +261,6 @@ const Utilisateurs: React.FC = () => {
   // ============================================================
   // SECTION 6 — DONNÉES DÉRIVÉES (calculées depuis l'état, sans setState)
   // ============================================================
-
-  // Suggestions pour le filtre par projet
-  const suggestionsFilterProjet: string[] =
-    rechercheFilterProjet.trim().length >= 2
-      ? TOUS_LES_PROJETS.filter((projet) =>
-          normaliserChaine(projet).includes(normaliserChaine(rechercheFilterProjet))
-        ).slice(0, 10)
-      : [];
 
   // Suggestions pour la recherche d'utilisateur
   const suggestionsUtilisateur: Utilisateur[] =
@@ -291,19 +276,20 @@ const Utilisateurs: React.FC = () => {
       : [];
 
   // Suggestions pour la recherche de projet à ajouter
-  const suggestionsProjet: string[] =
+  // Exclut les projets déjà attribués à l'utilisateur
+  const suggestionsProjet: ProjetAcces[] =
     rechercheProjet.trim().length >= 2
-      ? TOUS_LES_PROJETS.filter((projet) =>
-          normaliserChaine(projet).includes(normaliserChaine(rechercheProjet))
-        ).slice(0, 10)
+      ? tousLesProjets
+          .filter(
+            (p) =>
+              !projetsEnEdition.some((pe) => pe.id === p.id) &&
+              normaliserChaine(p.nom).includes(normaliserChaine(rechercheProjet))
+          )
+          .slice(0, 10)
       : [];
 
-  // Utilisateurs filtrés et triés pour le tableau
-  // Note : filtreProjetActif est conservé pour l'UI mais le filtrage réel
-  // nécessite l'API GET /utilisateurs/{id} — non implémenté ici.
-  const utilisateursAffiches: Utilisateur[] = trierUtilisateurs(
-    filtreProjetActif ? utilisateurs : utilisateurs
-  );
+  // Tous les utilisateurs triés pour le tableau
+  const utilisateursAffiches: Utilisateur[] = trierUtilisateurs(utilisateurs);
 
   // Détermine si les champs du formulaire sont modifiables
   // En mode création, les champs restent visibles mais vides et non éditables
@@ -353,6 +339,42 @@ const Utilisateurs: React.FC = () => {
     }
   }, []);
 
+  // Charge tous les projets disponibles depuis l'API
+  const chargerProjets = useCallback(async () => {
+    try {
+      const reponse = await projetsService.getAll();
+      const listeProjets: ProjetAcces[] = reponse.data.map((p: any) => ({
+        id : p.id,
+        nom: p.nom,
+      }));
+      setTousLesProjets(listeProjets);
+    } catch (erreur) {
+      console.error('Erreur chargement projets:', erreur);
+      afficherNotification('Erreur lors du chargement des projets', 'error');
+    }
+  }, []);
+
+  // Charge les projets d'un utilisateur spécifique via GET /utilisateurs/{id}
+  const chargerProjetsUtilisateur = useCallback(async (
+    idUtilisateur: number
+  ): Promise<ProjetAcces[]> => {
+    try {
+      const reponse = await utilisateursService.getById(idUtilisateur);
+      const detail  = reponse.data;
+      // UtilisateurDetailModele retourne projets_accessibles avec id_projet et nom_projet
+      const projets: ProjetAcces[] = (detail.projets_accessibles ?? []).map(
+        (p: any) => ({
+          id : p.id_projet,
+          nom: p.nom_projet,
+        })
+      );
+      return projets;
+    } catch (erreur) {
+      console.error('Erreur chargement projets utilisateur:', erreur);
+      return [];
+    }
+  }, []);
+
   // ============================================================
   // SECTION 9 — INITIALISATION AU MONTAGE DU COMPOSANT
   // ============================================================
@@ -366,12 +388,13 @@ const Utilisateurs: React.FC = () => {
 
     async function initialiser() {
       setIsLoading(true);
-      await chargerUtilisateurs();
+      // Charger utilisateurs et projets en parallèle
+      await Promise.all([chargerUtilisateurs(), chargerProjets()]);
       setIsLoading(false);
     }
 
     initialiser();
-  }, [navigate, chargerUtilisateurs]);
+  }, [navigate, chargerUtilisateurs, chargerProjets]);
 
   // ============================================================
   // SECTION 10 — GESTION DES MODES DU FORMULAIRE
@@ -389,41 +412,43 @@ const Utilisateurs: React.FC = () => {
   }
 
   // Passe en mode lecture : formulaire rempli, tous les champs désactivés
-  function activerModeLecture(utilisateur: Utilisateur) {
+  async function activerModeLecture(utilisateur: Utilisateur) {
     setModeFormulaire('lecture');
     setUtilisateurSelectionne(utilisateur);
     setFormulaire({
-      nom: utilisateur.nom,
+      nom   : utilisateur.nom,
       prenom: utilisateur.prenom,
-      email: utilisateur.email,
-      role: utilisateur.role,
+      email : utilisateur.email,
+      role  : utilisateur.role,
       statut: utilisateur.statut,
     });
-    // Les projets ne sont pas dans UtilisateurReponseModele — on réinitialise la liste
-    setProjetsEnEdition([]);
     setRechercheProjet('');
     setProjetEnAttente(null);
+    // Charger les projets actuels de l'utilisateur depuis l'API
+    const projets = await chargerProjetsUtilisateur(utilisateur.id);
+    setProjetsEnEdition(projets);
   }
 
   // Passe en mode édition : formulaire pré-rempli, champs actifs
   function activerModeEdition() {
     if (!utilisateurSelectionne) return;
     setModeFormulaire('edition');
-    // Les projets ne sont pas dans UtilisateurReponseModele — la liste reste vide
-    // Pour gérer les accès projets, utiliser la page Projets.tsx
-    setProjetsEnEdition([]);
+    // Les projets sont déjà chargés dans activerModeLecture
+    // Pas besoin de les recharger ici
   }
 
   // ============================================================
   // SECTION 11 — SÉLECTION D'UN UTILISATEUR (depuis tableau ou suggestions)
   // ============================================================
 
-  function selectionnerUtilisateur(utilisateurId: number) {
+  async function selectionnerUtilisateur(utilisateurId: number) {
     const utilisateurTrouve = utilisateurs.find((u) => u.id === utilisateurId);
     if (!utilisateurTrouve) return;
 
-    activerModeLecture(utilisateurTrouve);
-    setRechercheUtilisateur(`${utilisateurTrouve.prenom} ${utilisateurTrouve.nom} - ${utilisateurTrouve.email}`);
+    await activerModeLecture(utilisateurTrouve);
+    setRechercheUtilisateur(
+      `${utilisateurTrouve.prenom} ${utilisateurTrouve.nom} — ${utilisateurTrouve.email}`
+    );
     afficherNotification(
       `Utilisateur "${utilisateurTrouve.prenom} ${utilisateurTrouve.nom}" sélectionné`,
       'info'
@@ -440,19 +465,22 @@ const Utilisateurs: React.FC = () => {
       afficherNotification('Veuillez sélectionner un projet', 'warning');
       return;
     }
-    if (projetsEnEdition.includes(projetEnAttente)) {
-      afficherNotification(`Le projet "${projetEnAttente}" est déjà dans la liste`, 'warning');
+    if (projetsEnEdition.some((p) => p.id === projetEnAttente.id)) {
+      afficherNotification(
+        `Le projet "${projetEnAttente.nom}" est déjà dans la liste`,
+        'warning'
+      );
       return;
     }
     setProjetsEnEdition([...projetsEnEdition, projetEnAttente]);
-    afficherNotification(`Projet "${projetEnAttente}" ajouté`, 'success');
+    afficherNotification(`Projet "${projetEnAttente.nom}" ajouté`, 'success');
     setRechercheProjet('');
     setProjetEnAttente(null);
   }
 
   // Retire un projet de la liste en cours d'édition
-  function retirerProjet(nomProjet: string) {
-    setProjetsEnEdition(projetsEnEdition.filter((p) => p !== nomProjet));
+  function retirerProjet(idProjet: number, nomProjet: string) {
+    setProjetsEnEdition(projetsEnEdition.filter((p) => p.id !== idProjet));
     afficherNotification(`Projet "${nomProjet}" retiré`, 'warning');
   }
 
@@ -485,25 +513,52 @@ const Utilisateurs: React.FC = () => {
     }
 
     try {
-      // L'API PUT /utilisateurs/{id} accepte : nouveau_nom, nouveau_prenom, nouveau_email
+      // Étape 1 — Mettre à jour les infos de l'utilisateur
       await utilisateursService.update(utilisateurSelectionne.id, {
-        nouveau_nom: formulaire.nom,
+        nouveau_nom   : formulaire.nom,
         nouveau_prenom: formulaire.prenom,
-        nouveau_email: formulaire.email,
+        nouveau_email : formulaire.email,
       });
+
+      // Étape 2 — Synchroniser les accès projets
+      // Comparer les projets actuels en BD avec ceux en édition
+      const projetsActuels = await chargerProjetsUtilisateur(utilisateurSelectionne.id);
+      const idsActuels = new Set(projetsActuels.map((p) => p.id));
+      const idsVoulus  = new Set(projetsEnEdition.map((p) => p.id));
+
+      // Retirer les projets supprimés
+      for (const idProjet of idsActuels) {
+        if (!idsVoulus.has(idProjet)) {
+          try {
+            await accesService.retirer(idProjet, utilisateurSelectionne.id);
+          } catch (e) {
+            console.warn(`Impossible de retirer l'accès au projet ${idProjet}`, e);
+          }
+        }
+      }
+
+      // Ajouter les nouveaux projets
+      for (const projet of projetsEnEdition) {
+        if (!idsActuels.has(projet.id)) {
+          try {
+            await accesService.attribuer(projet.id, {
+              id_utilisateur: utilisateurSelectionne.id,
+            });
+          } catch (e) {
+            console.warn(`Impossible d'attribuer l'accès au projet ${projet.id}`, e);
+          }
+        }
+      }
 
       afficherNotification(
         `Utilisateur "${formulaire.prenom} ${formulaire.nom}" modifié avec succès`,
         'success'
       );
-      await chargerUtilisateurs();
 
-      // Retrouve l'utilisateur mis à jour dans la nouvelle liste et repasse en lecture
-      setUtilisateurs((listeActuelle) => {
-        const utilisateurMisAJour = listeActuelle.find((u) => u.id === utilisateurSelectionne.id);
-        if (utilisateurMisAJour) activerModeLecture(utilisateurMisAJour);
-        return listeActuelle;
-      });
+      const listeMAJ = await chargerUtilisateurs();
+      const utilisateurMAJ = listeMAJ.find((u) => u.id === utilisateurSelectionne.id);
+      if (utilisateurMAJ) await activerModeLecture(utilisateurMAJ);
+
     } catch (erreur) {
       console.error('Erreur modification utilisateur:', erreur);
       afficherNotification("Erreur lors de la modification de l'utilisateur", 'error');
@@ -640,15 +695,15 @@ const Utilisateurs: React.FC = () => {
 
     return (
       <ul className="projets-list">
-        {projetsEnEdition.map((nomProjet) => (
-          <li key={nomProjet}>
-            <span>• {nomProjet}</span>
-            {/* Bouton de suppression visible seulement en mode création ou édition */}
+        {projetsEnEdition.map((projet) => (
+          <li key={projet.id}>
+            <span>• {projet.nom}</span>
+            {/* Bouton retirer visible seulement en mode édition */}
             {ajoutProjetEstActif && (
               <button
                 className="remove-projet"
                 type="button"
-                onClick={() => retirerProjet(nomProjet)}
+                onClick={() => retirerProjet(projet.id, projet.nom)}
               >
                 ✖
               </button>
@@ -787,33 +842,7 @@ const Utilisateurs: React.FC = () => {
               </select>
             </div>
 
-            {/* CELLULE 6 — Filtrer par projet */}
-            <div className="cell">
-              <label className="cell-title">Filtrer par projet</label>
-              <ChampRecherche<string>
-                id="filtre-projet"
-                placeholder="Nom du projet..."
-                valeur={rechercheFilterProjet}
-                suggestions={suggestionsFilterProjet}
-                cléSuggestion={(projet) => projet}
-                renduSuggestion={(projet) => <strong>{projet}</strong>}
-                onChangement={(valeur) => {
-                  setRechercheFilterProjet(valeur);
-                  // Si le champ est vidé, retire le filtre actif
-                  if (valeur.trim() === '') setFiltreProjetActif(null);
-                }}
-                onSelectionSuggestion={(projet) => {
-                  setRechercheFilterProjet(projet);
-                  setFiltreProjetActif(projet);
-                  afficherNotification(`Filtre appliqué : ${projet}`, 'info');
-                }}
-                onEffacer={() => {
-                  setRechercheFilterProjet('');
-                  setFiltreProjetActif(null);
-                  afficherNotification('Filtre supprimé', 'info');
-                }}
-              />
-            </div>
+{/* CELLULE 6 — supprimée (filtre par projet retiré) */}
 
             {/* CELLULE 7+8 — Rechercher utilisateur */}
             <div className="cell cell-span-2">
@@ -848,21 +877,22 @@ const Utilisateurs: React.FC = () => {
             {/* CELLULE 10 — Rechercher et ajouter un projet */}
             <div className="cell">
               <label className="cell-title">Rechercher projet</label>
-              <ChampRecherche<string>
+              <ChampRecherche<ProjetAcces>
                 id="recherche-projet"
                 placeholder="Nom du projet..."
                 valeur={rechercheProjet}
                 suggestions={suggestionsProjet}
-                cléSuggestion={(projet) => projet}
-                renduSuggestion={(projet) => <strong>{projet}</strong>}
+                cléSuggestion={(p) => String(p.id)}
+                renduSuggestion={(p) => <strong>{p.nom}</strong>}
                 onChangement={(valeur) => {
                   setRechercheProjet(valeur);
-                  // Si l'utilisateur modifie le champ, annule la sélection en attente
-                  if (projetEnAttente && valeur !== projetEnAttente) setProjetEnAttente(null);
+                  if (projetEnAttente && valeur !== projetEnAttente.nom) {
+                    setProjetEnAttente(null);
+                  }
                 }}
-                onSelectionSuggestion={(projet) => {
-                  setRechercheProjet(projet);
-                  setProjetEnAttente(projet);
+                onSelectionSuggestion={(p) => {
+                  setRechercheProjet(p.nom);
+                  setProjetEnAttente(p);
                 }}
                 onEffacer={() => {
                   setRechercheProjet('');
@@ -880,10 +910,7 @@ const Utilisateurs: React.FC = () => {
               </button>
             </div>
 
-            {/* CELLULES 11, 12, 13 — Contenu à définir */}
-            <div className="cell"><div className="cell-number">11</div></div>
-            <div className="cell"><div className="cell-number">12</div></div>
-            <div className="cell"><div className="cell-number">13</div></div>
+
 
             {/* CELLULES 14+15 — Boutons d'action */}
             <div className="cell cell-span-2">
