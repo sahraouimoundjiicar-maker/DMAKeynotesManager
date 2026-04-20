@@ -156,17 +156,27 @@ def importer_fichier_txt(
 @router.get(
     "",
     response_model=list[ProjetReponseModele],
-    summary="Lister tous les projets",
+    summary="Lister les projets accessibles",
 )
 def lister_projets(
     utilisateur: dict = Depends(obtenir_utilisateur_actuel),
 ) -> list:
     """
-    Retourne la liste de tous les projets existants.
-    Accessible à tous les utilisateurs connectés.
+    Retourne les projets selon le rôle de l'utilisateur :
+        - super_admin → tous les projets
+        - utilisateur → uniquement ses projets accessibles
     """
-    # Étape 2.1 — Lister tous les projets
-    return service_projets.lister_projets()
+    # Étape 2.1 — Filtrer selon le rôle
+    role = utilisateur.get("role", "utilisateur")
+
+    if role == "super_admin":
+        # Super admin voit tous les projets
+        return service_projets.lister_projets()
+    else:
+        # Utilisateur voit uniquement ses projets
+        return service_projets.lister_projets_utilisateur(
+            utilisateur["id"]
+        )
 
 
 @router.get(

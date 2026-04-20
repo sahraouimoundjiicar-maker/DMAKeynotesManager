@@ -166,20 +166,36 @@ def lister_projets_utilisateur(
 ) -> list[dict]:
     """
     Retourne les projets accessibles par un utilisateur.
+    Normalise le format pour correspondre à ProjetReponseModele
+    (id, nom) même si le repository retourne (id_projet, nom_projet).
 
     Args:
         id_utilisateur: ID du utilisateur
 
     Returns:
-        Liste des projets accessibles par l'utilisateur
+        Liste des projets au format ProjetReponseModele
     """
     connexion = creer_connexion()
 
     try:
         # Étape 2.4 — Récupérer les projets du utilisateur
-        return repo_projets.lister_projets_par_utilisateur(
+        projets_bruts = repo_projets.lister_projets_par_utilisateur(
             connexion, id_utilisateur
         )
+
+        # Normaliser le format — le repository retourne id_projet/nom_projet
+        # mais ProjetReponseModele attend id/nom
+        return [
+            {
+                "id"                 : p["id_projet"],
+                "nom"                : p["nom_projet"],
+                "chemin_export"      : p.get("chemin_export"),
+                "txt_a_jour"         : p.get("txt_a_jour", False),
+                "date_dernier_export": p.get("date_dernier_export"),
+                "date_creation"      : p.get("date_creation"),
+            }
+            for p in projets_bruts
+        ]
 
     except Exception as erreur:
         logger.error(

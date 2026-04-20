@@ -234,6 +234,9 @@ def lister_projets_par_utilisateur(
                 "date_dernier_export": ligne[4],
                 "date_creation"      : ligne[5],
                 "date_attribution"   : ligne[6],
+                # Alias pour compatibilité avec ProjetReponseModele
+                "id"                 : ligne[0],
+                "nom"                : ligne[1],
             }
             for ligne in curseur.fetchall()
         ]
