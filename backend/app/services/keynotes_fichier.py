@@ -311,14 +311,25 @@ def _importer_mode_remplacer(
         effectue_par_role= effectue_par_role,
     )
 
-    # Étape 3.2 — Supprimer toutes les catégories
-    # ON DELETE CASCADE supprime automatiquement les notes
-    # liées à chaque catégorie supprimée.
+    # Étape 3.2 — Supprimer toutes les notes puis les catégories
+    # L'ordre est important : la contrainte FK notes_id_categorie_fkey
+    # est définie avec ON DELETE RESTRICT — il faut supprimer les notes
+    # avant les catégories pour éviter une violation de contrainte.
     categories_existantes = (
         repo_categories.lister_categories_du_projet(
             connexion, id_projet
         )
     )
+
+    # Étape 3.2a — Supprimer les notes de chaque catégorie d'abord
+    for categorie in categories_existantes:
+        notes_existantes = repo_notes.lister_notes_de_categorie(
+            connexion, categorie["id"]
+        )
+        for note in notes_existantes:
+            repo_notes.supprimer_note(connexion, note["id"])
+
+    # Étape 3.2b — Supprimer les catégories (maintenant vides)
     for categorie in categories_existantes:
         repo_categories.supprimer_categorie(
             connexion, categorie["id"]
