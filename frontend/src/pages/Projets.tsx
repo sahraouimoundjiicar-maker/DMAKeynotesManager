@@ -728,35 +728,13 @@ const Projets: React.FC = () => {
 
           <div className="grid-4x3">
 
-            {/* CELLULE TITRE — Création / Édition / Lecture */}
-            <div className="cell-merged cell-merged-3">
+            {/* LIGNE 1 — Titre (4 colonnes fusionnées) */}
+            <div className="cell-merged cell-merged-4">
               <h2 style={{ margin: 0, fontSize: '20px', color: '#333' }}>
                 {modeFormulaire === 'creation' && 'Nouveau projet'}
                 {modeFormulaire === 'lecture' && `Projet : ${projetSelectionne?.nom}`}
                 {modeFormulaire === 'edition' && `Modifier : ${projetSelectionne?.nom}`}
               </h2>
-            </div>
-
-            {/* CELLULE BOUTONS PRINCIPAUX */}
-            <div className="cell cell-no-left-padding">
-              <div className="button-group">
-                <button
-                  type="button"
-                  className="action-button"
-                  disabled={!enregistrerEstActif}
-                  onClick={enregistrer}
-                >
-                  Enregistrer
-                </button>
-                <button
-                  type="button"
-                  className="cancel-button"
-                  disabled={!annulerEstActif}
-                  onClick={annuler}
-                >
-                  Annuler
-                </button>
-              </div>
             </div>
 
             {/* CELLULE 1 — Nom du projet */}
@@ -893,8 +871,10 @@ const Projets: React.FC = () => {
               />
             </div>
 
-            {/* CELLULE 6+7 — Boutons d'action sur projet sélectionné */}
-            <div className="cell-merged cell-merged-2">
+            {/* LIGNE 3 — Boutons d'action (3 colonnes fusionnées) */}
+            {/* Contient tous les boutons : Importer, Exporter, Modifier, */}
+            {/* Enregistrer, Annuler, Supprimer                           */}
+            <div className="cell-merged cell-merged-3">
               <div className="button-group">
                 <button
                   type="button"
@@ -919,6 +899,22 @@ const Projets: React.FC = () => {
                   onClick={importerProjet}
                 >
                   Importer
+                </button>
+                <button
+                  type="button"
+                  className="action-button"
+                  disabled={!enregistrerEstActif}
+                  onClick={enregistrer}
+                >
+                  Enregistrer
+                </button>
+                <button
+                  type="button"
+                  className="cancel-button"
+                  disabled={!annulerEstActif}
+                  onClick={annuler}
+                >
+                  Annuler
                 </button>
                 <button
                   type="button"
