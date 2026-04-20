@@ -862,37 +862,35 @@ const Projets: React.FC = () => {
               </div>
             </div>
 
-            {/* CELLULE 4+5 — Rechercher projet existant */}
-            <div className="cell-merged cell-merged-2">
-              <div className="search-row">
-                <div className="cell-title">Chercher projet existant</div>
-                <ChampRecherche<Projet>
-                  id="recherche-projet"
-                  placeholder="Rechercher un projet par son nom..."
-                  valeur={rechercheProjet}
-                  suggestions={suggestionsProjet}
-                  cléSuggestion={(p) => String(p.id)}
-                  renduSuggestion={(p) => (
-                    <>
-                      <strong>{p.nom}</strong>
-                      <br />
-                      <small>Créé le {formaterDate(p.date_creation)}</small>
-                    </>
-                  )}
-                  onChangement={(valeur) => {
-                    setRechercheProjet(valeur);
-                    // Débloquer les suggestions quand l'utilisateur tape
-                    setSuggestionsProjetsBloquees(false);
-                    // Si le champ est vidé, repasse en mode création
-                    if (valeur.trim() === '') activerModeCreation();
-                  }}
-                  onSelectionSuggestion={(p) => selectionnerProjet(p.id)}
-                  onEffacer={() => {
-                    activerModeCreation();
-                    afficherNotification('Sélection effacée — Vous pouvez créer un nouveau projet', 'info');
-                  }}
-                />
-              </div>
+            {/* CELLULE 4 — Rechercher projet existant */}
+            <div className="cell-form">
+              <div className="cell-title">Chercher projet existant</div>
+              <ChampRecherche<Projet>
+                id="recherche-projet"
+                placeholder="Rechercher un projet par son nom..."
+                valeur={rechercheProjet}
+                suggestions={suggestionsProjet}
+                cléSuggestion={(p) => String(p.id)}
+                renduSuggestion={(p) => (
+                  <>
+                    <strong>{p.nom}</strong>
+                    <br />
+                    <small>Créé le {formaterDate(p.date_creation)}</small>
+                  </>
+                )}
+                onChangement={(valeur) => {
+                  setRechercheProjet(valeur);
+                  // Débloquer les suggestions quand l'utilisateur tape
+                  setSuggestionsProjetsBloquees(false);
+                  // Si le champ est vidé, repasse en mode création
+                  if (valeur.trim() === '') activerModeCreation();
+                }}
+                onSelectionSuggestion={(p) => selectionnerProjet(p.id)}
+                onEffacer={() => {
+                  activerModeCreation();
+                  afficherNotification('Sélection effacée — Vous pouvez créer un nouveau projet', 'info');
+                }}
+              />
             </div>
 
             {/* CELLULE 6+7 — Boutons d'action sur projet sélectionné */}
