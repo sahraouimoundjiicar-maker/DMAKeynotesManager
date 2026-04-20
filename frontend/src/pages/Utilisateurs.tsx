@@ -842,9 +842,9 @@ const Utilisateurs: React.FC = () => {
               </select>
             </div>
 
-            {/* LIGNE 2 — Col 1+2 : Chercher un utilisateur existant */}
+            {/* LIGNE 2 — Col 1+2 : Chercher utilisateur */}
             <div className="cell cell-span-2">
-              <label className="cell-title">Chercher un utilisateur existant</label>
+              <label className="cell-title">Chercher utilisateur</label>
               <ChampRecherche<Utilisateur>
                 id="recherche-utilisateur"
                 placeholder="Nom, prénom ou email..."
@@ -866,9 +866,15 @@ const Utilisateurs: React.FC = () => {
               />
             </div>
 
-            {/* LIGNE 2 — Col 3+4 : Chercher et attribuer un projet */}
+            {/* LIGNE 2 — Col 3 : Projets attribués */}
+            <div className="cell">
+              <label className="cell-title">Projets attribués</label>
+              {renduListeProjets()}
+            </div>
+
+            {/* LIGNE 2 — Col 4+5 : Attribuer projet */}
             <div className="cell cell-span-2">
-              <label className="cell-title">Attribuer un projet</label>
+              <label className="cell-title">Attribuer projet</label>
               <ChampRecherche<ProjetAcces>
                 id="recherche-projet"
                 placeholder="Chercher un projet..."
@@ -902,16 +908,10 @@ const Utilisateurs: React.FC = () => {
               </button>
             </div>
 
-            {/* LIGNE 2 — Col 5 : Liste des projets attribués */}
-            <div className="cell">
-              <label className="cell-title">Projets attribués</label>
-              {renduListeProjets()}
-            </div>
+            {/* LIGNE 3 — Col 1+2+3 : Vide */}
+            <div className="cell cell-span-3" />
 
-            {/* LIGNE 3 — Col 1+2 : Vide */}
-            <div className="cell cell-span-2" />
-
-            {/* LIGNE 3 — Col 3+4 : Boutons d'action */}
+            {/* LIGNE 3 — Col 4+5 : Boutons d'action */}
             <div className="cell cell-span-2">
               <div className="button-group">
                 <button
@@ -948,9 +948,6 @@ const Utilisateurs: React.FC = () => {
                 </button>
               </div>
             </div>
-
-            {/* LIGNE 3 — Col 5 : Vide */}
-            <div className="cell" />
           </div>
         </div>
 
