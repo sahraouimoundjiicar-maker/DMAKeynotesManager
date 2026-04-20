@@ -128,7 +128,7 @@ export const projetsService = {
     }
 
     const blob        = await reponse.blob();
-    const nomFichier  = `${nomProjet}-Keynotes.txt`;
+    const nomFichier  = `${nomProjet}.txt`;
 
     // Étape 2 — Tenter l'API File System Access (Chrome/Edge)
     // Affiche une vraie fenêtre "Enregistrer sous" Windows

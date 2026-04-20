@@ -226,17 +226,12 @@ def _cle_tri_naturel(valeur: str) -> list:
 def _construire_nom_fichier(nom_projet: str) -> str:
     """
     Construit le nom du fichier .txt à partir du nom du projet.
+    Le nom du projet est utilisé tel quel — sans transformation.
 
     Args:
         nom_projet: Nom du projet Revit
 
     Returns:
-        Nom du fichier .txt (ex: keynotes_ecole_primaire.txt)
+        Nom du fichier .txt (ex: "2026-016.txt")
     """
-    nom_nettoye = nom_projet.lower().strip()
-    nom_nettoye = nom_nettoye.replace(" ", "_")
-    nom_nettoye = "".join(
-        c for c in nom_nettoye
-        if c.isalnum() or c == "_"
-    )
-    return f"{nom_nettoye}-Keynotes{EXTENSION_FICHIER_KEYNOTES}"
+    return f"{nom_projet}{EXTENSION_FICHIER_KEYNOTES}"

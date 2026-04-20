@@ -158,6 +158,51 @@ def verifier_numero_note_unique(
         curseur.close()
 
 
+
+
+def verifier_description_note_unique(
+    connexion    : psycopg2.extensions.connection,
+    id_categorie : int,
+    description  : str,
+) -> bool:
+    """
+    Vérifie qu'une description de note n'existe pas déjà
+    dans une catégorie.
+    Utilisée en mode fusion pour éviter les doublons de contenu.
+
+    Args:
+        connexion   : Connexion PostgreSQL active
+        id_categorie: ID de la catégorie
+        description : Description à vérifier
+
+    Returns:
+        True si la description est disponible (unique)
+        False si elle existe déjà
+    """
+    curseur = connexion.cursor()
+
+    try:
+        # Étape 1.3 — Vérifier l'unicité de la description
+        # Comparaison insensible à la casse et aux espaces
+        curseur.execute("""
+            SELECT COUNT(*)
+            FROM notes
+            WHERE id_categorie = %s
+              AND LOWER(TRIM(description)) = LOWER(TRIM(%s));
+        """, (id_categorie, description))
+
+        nombre = curseur.fetchone()[0]
+        # True = disponible (unique), False = existe déjà
+        return nombre == 0
+
+    except Exception as erreur:
+        logger.error(
+            f"Erreur vérification description note : {erreur}"
+        )
+        raise
+    finally:
+        curseur.close()
+
 def lister_notes_de_categorie(
     connexion   : psycopg2.extensions.connection,
     id_categorie: int,

@@ -41,6 +41,7 @@ from app.repositories import notes as repo_notes
 from app.repositories import projets as repo_projets
 from app.repositories import historique as repo_historique
 from app.utils.revit_numerotation import (
+    normaliser_numero_import,
     valider_numero_categorie,
     valider_numero_note,
     message_range_invalide,
@@ -402,23 +403,26 @@ def _inserer_keynotes(
     """
     # Étape 3.5 — Insérer catégories et notes
     nb_categories = 0
-    nb_notes = 0
+    nb_notes      = 0
 
     for item in keynotes_parsed:
         numero_cat = item["numero_categorie"]
         desc_cat   = item["description_categorie"]
 
-        # Valider le format Revit du numéro de catégorie
-        # Les catégories non conformes sont ignorées avec warning
+        # Normaliser le numéro — supprime les préfixes A/DA non conformes
+        # Ex: A200 → 200, DA200 → D200
+        numero_cat = normaliser_numero_import(numero_cat)
+
+        # Valider le format Revit — ignorer les catégories non conformes
         if not valider_numero_categorie(numero_cat):
             logger.warning(
-                f"Import : numéro de catégorie '{numero_cat}' "
-                "ignoré — format Revit non valide "
-                "(attendu : multiple de 100 ou cas fixes 000/020)."
+                f"Import : catégorie '{numero_cat}' ignorée — "
+                "format non valide (attendu : multiple de 10 (000-090) "
+                "ou multiple de 100 (≥100), préfixe D optionnel)."
             )
             continue
 
-        # Vérifier si la catégorie existe déjà (mode fusion)
+        # Mode fusion — vérifier si la catégorie existe déjà
         if ignorer_doublons:
             numero_disponible = (
                 repo_categories
@@ -427,8 +431,28 @@ def _inserer_keynotes(
                 )
             )
             if not numero_disponible:
+                # Catégorie existante — récupérer son ID et traiter
+                # quand même ses notes pour ajouter les nouvelles
+                categorie_existante = (
+                    repo_categories.obtenir_categorie_par_numero(
+                        connexion, id_projet, numero_cat
+                    )
+                )
+                if categorie_existante:
+                    nb_notes += _inserer_notes(
+                        connexion,
+                        id_projet,
+                        categorie_existante["id"],
+                        numero_cat,
+                        item["notes"],
+                        effectue_par_id,
+                        effectue_par_role,
+                        action_note,
+                        ignorer_doublons,
+                    )
                 continue
 
+        # Créer la nouvelle catégorie
         categorie = repo_categories.inserer_categorie(
             connexion,
             id_projet,
@@ -450,51 +474,18 @@ def _inserer_keynotes(
             nouvelle_valeur  = f"{numero_cat} — {desc_cat}",
         )
 
-        # Insérer les notes de cette catégorie
-        for note in item["notes"]:
-            numero_note = note["numero"]
-            desc_note   = note["description"]
-
-            # Valider le format Revit du numéro de note
-            # Les notes non conformes sont ignorées avec warning
-            if not valider_numero_note(numero_note, numero_cat):
-                logger.warning(
-                    f"Import : numéro de note '{numero_note}' "
-                    f"ignoré — {message_range_invalide(numero_cat)}"
-                )
-                continue
-
-            # Vérifier si la note existe déjà (mode fusion)
-            if ignorer_doublons:
-                numero_disponible = (
-                    repo_notes.verifier_numero_note_unique(
-                        connexion, id_projet, numero_note
-                    )
-                )
-                if not numero_disponible:
-                    continue
-
-            note_inseree = repo_notes.inserer_note(
-                connexion,
-                id_projet,
-                categorie["id"],
-                numero_note,
-                desc_note,
-                effectue_par_id,
-            )
-            nb_notes += 1
-
-            # Enregistrer dans l'historique
-            repo_historique.inserer_historique(
-                connexion,
-                id_projet        = id_projet,
-                table_cible      = "notes",
-                action           = action_note,
-                effectue_par_id  = effectue_par_id,
-                effectue_par_role= effectue_par_role,
-                id_cible         = note_inseree["id"],
-                nouvelle_valeur  = f"{numero_note} — {desc_note}",
-            )
+        # Insérer les notes de la nouvelle catégorie
+        nb_notes += _inserer_notes(
+            connexion,
+            id_projet,
+            categorie["id"],
+            numero_cat,
+            item["notes"],
+            effectue_par_id,
+            effectue_par_role,
+            action_note,
+            ignorer_doublons,
+        )
 
     logger.info(
         f"Import : {nb_categories} catégories, "
@@ -505,6 +496,103 @@ def _inserer_keynotes(
         "categories_inserees": nb_categories,
         "notes_inserees"     : nb_notes,
     }
+
+
+def _inserer_notes(
+    connexion        : object,
+    id_projet        : int,
+    id_categorie     : int,
+    numero_cat       : str,
+    notes            : list[dict],
+    effectue_par_id  : int,
+    effectue_par_role: str,
+    action_note      : str,
+    ignorer_doublons : bool,
+) -> int:
+    """
+    Insère les notes d'une catégorie.
+    Utilisée aussi bien pour les catégories nouvelles
+    que pour les catégories existantes en mode fusion.
+
+    Args:
+        connexion        : Connexion PostgreSQL active
+        id_projet        : ID du projet
+        id_categorie     : ID de la catégorie parente
+        numero_cat       : Numéro de la catégorie (pour validation)
+        notes            : Liste des notes à insérer
+        effectue_par_id  : ID de l'auteur
+        effectue_par_role: Rôle de l'auteur
+        action_note      : Action à enregistrer dans l'historique
+        ignorer_doublons : Si True, ignore les numéros existants
+
+    Returns:
+        Nombre de notes insérées
+    """
+    nb_notes = 0
+
+    for note in notes:
+        numero_note = note["numero"]
+        desc_note   = note["description"]
+
+        # Normaliser le numéro de note (supprime préfixe A/DA)
+        numero_note = normaliser_numero_import(numero_note)
+
+        # Valider le format Revit du numéro de note
+        if not valider_numero_note(numero_note, numero_cat):
+            logger.warning(
+                f"Import : note '{numero_note}' ignorée — "
+                f"{message_range_invalide(numero_cat)}"
+            )
+            continue
+
+        # Mode fusion — ignorer si le numéro existe déjà
+        if ignorer_doublons:
+            numero_disponible = (
+                repo_notes.verifier_numero_note_unique(
+                    connexion, id_projet, numero_note
+                )
+            )
+            if not numero_disponible:
+                continue
+
+            # Ignorer aussi si la description existe déjà dans la catégorie
+            # pour éviter les doublons de contenu
+            description_disponible = (
+                repo_notes.verifier_description_note_unique(
+                    connexion, id_categorie, desc_note
+                )
+            )
+            if not description_disponible:
+                logger.info(
+                    f"Import : note '{numero_note}' ignorée — "
+                    "description déjà présente dans la catégorie."
+                )
+                continue
+
+        # Insérer la note
+        note_inseree = repo_notes.inserer_note(
+            connexion,
+            id_projet,
+            id_categorie,
+            numero_note,
+            desc_note,
+            effectue_par_id,
+        )
+        nb_notes += 1
+
+        # Enregistrer dans l'historique
+        repo_historique.inserer_historique(
+            connexion,
+            id_projet        = id_projet,
+            table_cible      = "notes",
+            action           = action_note,
+            effectue_par_id  = effectue_par_id,
+            effectue_par_role= effectue_par_role,
+            id_cible         = note_inseree["id"],
+            nouvelle_valeur  = f"{numero_note} — {desc_note}",
+        )
+
+    return nb_notes
 
 
 # ─────────────────────────────────────────────────────────────
@@ -630,10 +718,7 @@ def _construire_nom_fichier(nom_projet: str) -> str:
         Nom du fichier .txt
     """
     # Étape 4.5 — Normaliser le nom pour le fichier
-    nom_nettoye = nom_projet.lower().strip()
-    nom_nettoye = nom_nettoye.replace(" ", "_")
-    nom_nettoye = "".join(
-        c for c in nom_nettoye
-        if c.isalnum() or c == "_"
-    )
-    return f"keynotes_{nom_nettoye}{EXTENSION_FICHIER_KEYNOTES}"
+    # Nom du fichier = nom du projet tel quel + .txt
+    # Ex: projet "2026-016" → "2026-016.txt"
+    # Garder le nom du projet tel quel — pas de transformation
+    return f"{nom_projet.strip()}{EXTENSION_FICHIER_KEYNOTES}"

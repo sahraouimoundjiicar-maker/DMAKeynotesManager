@@ -102,27 +102,25 @@ function trierParNumero<T extends { numero: string }>(liste: T[]): T[] {
 // ============================================================
 // SECTION 2B — LOGIQUE NUMÉROTATION REVIT
 //
-// Règles du format Revit keynotes :
-//   - Catégorie "000" → notes "001" à "019"
-//   - Catégorie "020" → notes "021" à "099"
-//   - Catégorie "100" → notes "101" à "199"
-//   - Catégorie "D200" → notes "D201" à "D299"
-//   - Règle générale : préfixe + numéro entre x01 et x99
+// Catégories valides :
+//   Multiples de 10  (000-090) : 000, 010, 020... 090
+//   Multiples de 100 (≥100)   : 100, 200, 300...
+//   Avec préfixe D             : D000, D020, D100, D200...
+//
+// Notes — range selon la catégorie parente :
+//   Catégorie multiple de 10  → +1 à +9  (ex: 020 → 021-029)
+//   Catégorie multiple de 100 → +1 à +99 (ex: 200 → 201-299)
+//   Même logique avec préfixe D
 // ============================================================
-
-// Cas fixes pour les catégories spéciales 000 et 020
-const RANGES_FIXES: Record<string, { min: number; max: number }> = {
-  '000': { min: 1,  max: 19  }, // 001 à 019
-  '020': { min: 21, max: 99  }, // 021 à 099
-};
 
 /**
  * Calcule le range valide pour les notes d'une catégorie.
- * Retourne { prefixe, min, max } pour valider et générer les numéros.
+ * Retourne { prefixe, base, min, max } ou null si invalide.
  *
+ * Ex: "020"  → { prefixe: "",  base: 20,  min: 21,  max: 29  }
  * Ex: "100"  → { prefixe: "",  base: 100, min: 101, max: 199 }
+ * Ex: "D020" → { prefixe: "D", base: 20,  min: 21,  max: 29  }
  * Ex: "D200" → { prefixe: "D", base: 200, min: 201, max: 299 }
- * Ex: "000"  → { prefixe: "",  base: 0,   min: 1,   max: 19  }
  */
 function calculerRangeNote(numeroCategorie: string): {
   prefixe : string;
@@ -132,36 +130,28 @@ function calculerRangeNote(numeroCategorie: string): {
 } | null {
   const numeroBrut = numeroCategorie.trim().toUpperCase();
 
-  // Cas fixes : 000 et 020
-  if (RANGES_FIXES[numeroBrut]) {
-    return {
-      prefixe : '',
-      base    : parseInt(numeroBrut, 10),
-      min     : RANGES_FIXES[numeroBrut].min,
-      max     : RANGES_FIXES[numeroBrut].max,
-    };
-  }
-
-  // Cas général : extraire le préfixe alphabétique et la base numérique
-  // Ex: "D200" → prefixe="D", base=200
-  // Ex: "500"  → prefixe="",  base=500
-  const match = numeroBrut.match(/^([A-Z]*)(\d+)$/);
+  // Extraire préfixe "D" ou "" et partie numérique
+  const match = numeroBrut.match(/^(D?)(\d+)$/);
   if (!match) return null;
 
-  const prefixe = match[1]; // "D" ou ""
-  const base    = parseInt(match[2], 10); // 200, 500, etc.
+  const prefixe = match[1];
+  const base    = parseInt(match[2], 10);
 
-  return {
-    prefixe,
-    base,
-    min : base + 1,   // 201, 501, etc.
-    max : base + 99,  // 299, 599, etc.
-  };
+  // Catégorie multiple de 10 entre 0 et 90 → range +1 à +9
+  if (base >= 0 && base <= 90 && base % 10 === 0) {
+    return { prefixe, base, min: base + 1, max: base + 9 };
+  }
+
+  // Catégorie multiple de 100 à partir de 100 → range +1 à +99
+  if (base >= 100 && base % 100 === 0) {
+    return { prefixe, base, min: base + 1, max: base + 99 };
+  }
+
+  return null;
 }
 
 /**
  * Vérifie si un numéro de note respecte le range de sa catégorie.
- * Retourne true si valide, false sinon.
  */
 function validerNumeroNote(
   numeroNote      : string,
@@ -175,7 +165,7 @@ function validerNumeroNote(
   // Vérifier que le préfixe correspond
   if (!numeroBrut.startsWith(range.prefixe)) return false;
 
-  // Extraire la partie numérique
+  // Extraire et valider la partie numérique
   const partieNumerique = numeroBrut.slice(range.prefixe.length);
   const valeur = parseInt(partieNumerique, 10);
   if (isNaN(valeur)) return false;
@@ -185,10 +175,11 @@ function validerNumeroNote(
 
 /**
  * Génère le prochain numéro disponible pour une catégorie.
- * Si tous les numéros sont pris, retourne null.
+ * Retourne null si tous les numéros du range sont pris.
  *
- * Ex: catégorie "100", notes existantes ["101","102"] → "103"
- * Ex: catégorie "D200", notes existantes ["D201"]     → "D202"
+ * Ex: catégorie "020", notes ["021","022"] → "023"
+ * Ex: catégorie "100", notes ["101","102"] → "103"
+ * Ex: catégorie "D200", notes ["D201"]     → "D202"
  */
 function genererProchainNumeroNote(
   numeroCategorie  : string,
@@ -197,26 +188,24 @@ function genererProchainNumeroNote(
   const range = calculerRangeNote(numeroCategorie);
   if (!range) return null;
 
-  // Construire l'ensemble des numéros déjà pris (en majuscules)
+  // Ensemble des numéros déjà pris (en majuscules)
   const numerosExistantsMaj = new Set(
     numerosExistants.map((n) => n.trim().toUpperCase())
   );
 
+  // Longueur du padding basée sur le max du range
+  const longueurPadding = String(range.max).length;
+
   // Trouver le premier numéro disponible dans le range
   for (let valeur = range.min; valeur <= range.max; valeur++) {
-    // Formater avec padding : 001, 002... ou D201, D202...
-    const nombreFormate = String(valeur).padStart(
-      String(range.base + 99).length, // longueur basée sur le max
-      '0'
-    );
+    const nombreFormate  = String(valeur).padStart(longueurPadding, '0');
     const numeroCandidat = `${range.prefixe}${nombreFormate}`;
-
     if (!numerosExistantsMaj.has(numeroCandidat)) {
       return numeroCandidat;
     }
   }
 
-  return null; // Plus de numéros disponibles
+  return null;
 }
 
 // ============================================================

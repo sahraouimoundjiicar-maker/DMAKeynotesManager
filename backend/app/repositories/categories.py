@@ -86,6 +86,62 @@ def obtenir_categorie_par_id(
         curseur.close()
 
 
+
+
+def obtenir_categorie_par_numero(
+    connexion : psycopg2.extensions.connection,
+    id_projet : int,
+    numero    : str,
+) -> dict | None:
+    """
+    Récupère une catégorie par son numéro dans un projet.
+    Utilisée lors de l'import en mode fusion pour récupérer
+    l'ID d'une catégorie existante et ajouter ses nouvelles notes.
+
+    Args:
+        connexion: Connexion PostgreSQL active
+        id_projet: ID du projet
+        numero   : Numéro de la catégorie
+
+    Returns:
+        Dictionnaire avec les infos ou None si absente
+    """
+    curseur = connexion.cursor()
+
+    try:
+        # Étape 1.6 — Rechercher la catégorie par numéro
+        curseur.execute("""
+            SELECT
+                id,
+                id_projet,
+                numero,
+                description,
+                version
+            FROM categories
+            WHERE id_projet = %s
+              AND UPPER(numero) = UPPER(%s);
+        """, (id_projet, numero))
+
+        ligne = curseur.fetchone()
+        if not ligne:
+            return None
+
+        return {
+            "id"         : ligne[0],
+            "id_projet"  : ligne[1],
+            "numero"     : ligne[2],
+            "description": ligne[3],
+            "version"    : ligne[4],
+        }
+
+    except Exception as erreur:
+        logger.error(
+            f"Erreur obtenir catégorie par numéro : {erreur}"
+        )
+        raise
+    finally:
+        curseur.close()
+
 def verifier_numero_categorie_unique(
     connexion   : psycopg2.extensions.connection,
     id_projet   : int,
