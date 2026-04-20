@@ -165,8 +165,8 @@ const Connexion: React.FC = () => {
     if (!password) {
       nouvErreurs.password = 'Le mot de passe est obligatoire';
       estValide = false;
-    } else if (password.length < 8) {
-      nouvErreurs.password = 'Le mot de passe doit contenir au moins 8 caractères';
+    } else if (password.length < 3) {
+      nouvErreurs.password = 'Le mot de passe doit contenir au moins 3 caractères';
       estValide = false;
     }
 

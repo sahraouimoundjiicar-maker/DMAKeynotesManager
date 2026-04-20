@@ -214,10 +214,9 @@ TAILLE_MAX_FICHIER_IMPORT = 5 * 1024 * 1024  # 5 MB
 
 # Étape 7.1 — Longueur minimale du mot de passe
 """
-8 caractères minimum pour garantir un niveau
-de sécurité basique.
+3 caractères minimum.
 """
-MOT_DE_PASSE_MIN_LONGUEUR = 8
+MOT_DE_PASSE_MIN_LONGUEUR = 3
 
 # Étape 7.2 — Longueur minimale du nom et prénom
 """
