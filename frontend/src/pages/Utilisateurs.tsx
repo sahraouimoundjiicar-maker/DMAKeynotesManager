@@ -842,11 +842,9 @@ const Utilisateurs: React.FC = () => {
               </select>
             </div>
 
-{/* CELLULE 6 — supprimée (filtre par projet retiré) */}
-
-            {/* CELLULE 7+8 — Rechercher utilisateur */}
+            {/* LIGNE 2 — Col 1+2 : Chercher un utilisateur existant */}
             <div className="cell cell-span-2">
-              <label className="cell-title">Rechercher utilisateur</label>
+              <label className="cell-title">Chercher un utilisateur existant</label>
               <ChampRecherche<Utilisateur>
                 id="recherche-utilisateur"
                 placeholder="Nom, prénom ou email..."
@@ -855,7 +853,7 @@ const Utilisateurs: React.FC = () => {
                 cléSuggestion={(u) => String(u.id)}
                 renduSuggestion={(u) => (
                   <>
-                    <strong>{u.prenom} {u.nom}</strong> - {u.email}
+                    <strong>{u.prenom} {u.nom}</strong> — {u.email}
                   </>
                 )}
                 onChangement={(valeur) => setRechercheUtilisateur(valeur)}
@@ -863,23 +861,17 @@ const Utilisateurs: React.FC = () => {
                 onEffacer={() => {
                   setRechercheUtilisateur('');
                   activerModeCreation();
-                  afficherNotification('Recherche effacée - Mode création activé', 'info');
+                  afficherNotification('Recherche effacée', 'info');
                 }}
               />
             </div>
 
-            {/* CELLULE 9 — Liste des projets de l'utilisateur */}
-            <div className="cell">
-              <label className="cell-title">Projets</label>
-              {renduListeProjets()}
-            </div>
-
-            {/* CELLULE 10 — Rechercher et ajouter un projet */}
-            <div className="cell">
-              <label className="cell-title">Rechercher projet</label>
+            {/* LIGNE 2 — Col 3+4 : Chercher et attribuer un projet */}
+            <div className="cell cell-span-2">
+              <label className="cell-title">Attribuer un projet</label>
               <ChampRecherche<ProjetAcces>
                 id="recherche-projet"
-                placeholder="Nom du projet..."
+                placeholder="Chercher un projet..."
                 valeur={rechercheProjet}
                 suggestions={suggestionsProjet}
                 cléSuggestion={(p) => String(p.id)}
@@ -910,9 +902,16 @@ const Utilisateurs: React.FC = () => {
               </button>
             </div>
 
+            {/* LIGNE 2 — Col 5 : Liste des projets attribués */}
+            <div className="cell">
+              <label className="cell-title">Projets attribués</label>
+              {renduListeProjets()}
+            </div>
 
+            {/* LIGNE 3 — Col 1+2 : Vide */}
+            <div className="cell cell-span-2" />
 
-            {/* CELLULES 14+15 — Boutons d'action */}
+            {/* LIGNE 3 — Col 3+4 : Boutons d'action */}
             <div className="cell cell-span-2">
               <div className="button-group">
                 <button
@@ -949,6 +948,9 @@ const Utilisateurs: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* LIGNE 3 — Col 5 : Vide */}
+            <div className="cell" />
           </div>
         </div>
 
