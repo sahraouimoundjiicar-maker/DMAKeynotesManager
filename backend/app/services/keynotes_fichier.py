@@ -40,12 +40,8 @@ from app.repositories import categories as repo_categories
 from app.repositories import notes as repo_notes
 from app.repositories import projets as repo_projets
 from app.repositories import historique as repo_historique
-from app.utils.revit_numerotation import (
-    normaliser_numero_import,
-    valider_numero_categorie,
-    valider_numero_note,
-    message_range_invalide,
-)
+# Pas de validation DMA à l'import — on accepte tous les formats Revit.
+# La validation DMA s'applique uniquement à la création manuelle.
 
 
 # Initialiser le logger pour ce module
@@ -386,7 +382,7 @@ def _inserer_keynotes(
 ) -> dict:
     """
     Insère les catégories et notes parsées dans la BD.
-    Valide le format Revit — ignore les numéros non conformes.
+    Accepte tous les formats de numéros — pas de validation DMA à l'import.
 
     Args:
         connexion        : Connexion PostgreSQL active
@@ -408,19 +404,6 @@ def _inserer_keynotes(
     for item in keynotes_parsed:
         numero_cat = item["numero_categorie"]
         desc_cat   = item["description_categorie"]
-
-        # Normaliser le numéro — supprime les préfixes A/DA non conformes
-        # Ex: A200 → 200, DA200 → D200
-        numero_cat = normaliser_numero_import(numero_cat)
-
-        # Valider le format Revit — ignorer les catégories non conformes
-        if not valider_numero_categorie(numero_cat):
-            logger.warning(
-                f"Import : catégorie '{numero_cat}' ignorée — "
-                "format non valide (attendu : multiple de 10 (000-090) "
-                "ou multiple de 100 (≥100), préfixe D optionnel)."
-            )
-            continue
 
         # Mode fusion — vérifier si la catégorie existe déjà
         if ignorer_doublons:
@@ -479,7 +462,6 @@ def _inserer_keynotes(
             connexion,
             id_projet,
             categorie["id"],
-            numero_cat,
             item["notes"],
             effectue_par_id,
             effectue_par_role,
@@ -502,7 +484,6 @@ def _inserer_notes(
     connexion        : object,
     id_projet        : int,
     id_categorie     : int,
-    numero_cat       : str,
     notes            : list[dict],
     effectue_par_id  : int,
     effectue_par_role: str,
@@ -518,7 +499,6 @@ def _inserer_notes(
         connexion        : Connexion PostgreSQL active
         id_projet        : ID du projet
         id_categorie     : ID de la catégorie parente
-        numero_cat       : Numéro de la catégorie (pour validation)
         notes            : Liste des notes à insérer
         effectue_par_id  : ID de l'auteur
         effectue_par_role: Rôle de l'auteur
@@ -533,17 +513,6 @@ def _inserer_notes(
     for note in notes:
         numero_note = note["numero"]
         desc_note   = note["description"]
-
-        # Normaliser le numéro de note (supprime préfixe A/DA)
-        numero_note = normaliser_numero_import(numero_note)
-
-        # Valider le format Revit du numéro de note
-        if not valider_numero_note(numero_note, numero_cat):
-            logger.warning(
-                f"Import : note '{numero_note}' ignorée — "
-                f"{message_range_invalide(numero_cat)}"
-            )
-            continue
 
         # Mode fusion — ignorer si le numéro existe déjà
         if ignorer_doublons:
@@ -638,45 +607,77 @@ def _parser_fichier_txt(contenu_txt: str) -> list[dict]:
     keynotes_par_categorie = {}
     ordre_categories = []
 
+    # Dernière entrée traitée — pour fusionner les descriptions multi-lignes
+    # Une continuation est une ligne dont la 1re colonne n'est pas un Key Value Revit
+    derniere_entree: dict | None = None
+
     for numero_ligne, ligne in enumerate(lignes, 1):
         colonnes = ligne.split(SEPARATEUR_COLONNES_TXT)
 
+        # Détecter si c'est une ligne de continuation :
+        # — 1 seule colonne, OU
+        # — première colonne non vide mais pas un numéro Revit valide
+        premiere_colonne = colonnes[0].strip()
+        est_continuation = (
+            derniere_entree is not None
+            and premiere_colonne
+            and not re.match(r'^(D?A?)\d+$', premiere_colonne.upper())
+        )
+
+        if est_continuation:
+            # Reconstituer le texte complet de la ligne (toutes colonnes)
+            texte_continuation = ' '.join(c.strip() for c in colonnes if c.strip())
+            if texte_continuation:
+                obj   = derniere_entree["description_ref"]
+                champ = derniere_entree["champ"]
+                obj[champ] += " " + texte_continuation
+            continue
+
+        # Ligne malformée sans entrée précédente — ignorer
         if len(colonnes) < 2:
-            raise ValueError(
-                f"Format invalide à la ligne {numero_ligne}. "
-                "Format attendu : numéro[TAB]description[TAB]parent."
+            logger.warning(
+                f"Import : ligne {numero_ligne} ignorée — "
+                "format invalide (attendu : numéro[TAB]description[TAB]parent)."
             )
+            derniere_entree = None
+            continue
 
         numero      = colonnes[0].strip()
-        description = colonnes[1].strip()
+        description = colonnes[1].strip() if len(colonnes) > 1 else ""
         parent      = colonnes[2].strip() if len(colonnes) > 2 else ""
 
-        if not numero or not description:
-            raise ValueError(
-                f"Ligne {numero_ligne} : le numéro et "
-                "la description sont obligatoires."
+        # Ignorer les lignes sans numéro
+        if not numero:
+            logger.warning(
+                f"Import : ligne {numero_ligne} ignorée — numéro vide."
             )
+            continue
 
         if parent == "":
-            # Ligne sans parent = catégorie
-            keynotes_par_categorie[numero] = {
+            # 3e colonne vide → catégorie racine
+            entree = {
                 "numero_categorie"     : numero,
                 "description_categorie": description,
                 "notes"                : [],
             }
+            keynotes_par_categorie[numero] = entree
             ordre_categories.append(numero)
+            derniere_entree = {"description_ref": entree, "champ": "description_categorie"}
         else:
-            # Ligne avec parent = note
+            # 3e colonne remplie → note appartenant à ce parent
             if parent not in keynotes_par_categorie:
-                raise ValueError(
-                    f"Ligne {numero_ligne} : la catégorie "
-                    f"parent '{parent}' n'a pas été "
-                    "définie avant cette note."
+                logger.warning(
+                    f"Import : ligne {numero_ligne} — catégorie "
+                    f"parent '{parent}' introuvable, note ignorée."
                 )
-            keynotes_par_categorie[parent]["notes"].append({
+                derniere_entree = None
+                continue
+            note = {
                 "numero"     : numero,
                 "description": description,
-            })
+            }
+            keynotes_par_categorie[parent]["notes"].append(note)
+            derniere_entree = {"description_ref": note, "champ": "description"}
 
     # Étape 4.3 — Retourner dans l'ordre de lecture
     return [
