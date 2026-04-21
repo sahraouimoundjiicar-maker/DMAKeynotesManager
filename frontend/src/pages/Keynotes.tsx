@@ -406,7 +406,8 @@ const Keynotes: React.FC = () => {
   const noteEstModifiable = modeNote === 'creation' || modeNote === 'edition';
 
   // Détermine si le bouton "Annuler" est actif
-  const annulerEstActif = modeCategorie === 'edition' || modeNote === 'edition';
+  // Actif dès qu'un projet, une catégorie ou une note est sélectionné
+  const annulerEstActif = idProjetSelectionne !== null || typeSelection !== 'aucun';
 
   // ============================================================
   // SECTION 7 — NOTIFICATIONS
@@ -718,6 +719,11 @@ const Keynotes: React.FC = () => {
       });
       setModeNote('lecture');
       afficherNotification('Modifications annulées', 'warning');
+    } else {
+      // Réinitialiser tout — vider toutes les cellules
+      setIdProjetSelectionne(null);
+      reinitialiserFormulaires();
+      afficherNotification('Sélection annulée', 'info');
     }
   }
 
@@ -1160,6 +1166,7 @@ const Keynotes: React.FC = () => {
                 id="projectSelect"
                 className="project-select"
                 value={idProjetSelectionne ?? ''}
+                disabled={typeSelection !== 'aucun'}
                 onChange={(e) => {
                   const valeur = e.target.value;
                   changerProjet(valeur === '' ? null : parseInt(valeur));
