@@ -227,10 +227,10 @@ NOM_MIN_LONGUEUR = 2
 
 # Étape 7.3 — Longueur maximale des descriptions
 """
-500 caractères maximum pour éviter les textes trop longs
-qui pourraient corrompre le fichier .txt Revit.
+2000 caractères maximum pour supporter les descriptions
+multi-lignes importées depuis les fichiers .txt Revit.
 """
-DESCRIPTION_MAX_LONGUEUR = 500
+DESCRIPTION_MAX_LONGUEUR = 2000
 
 
 # ─────────────────────────────────────────────────────────────
