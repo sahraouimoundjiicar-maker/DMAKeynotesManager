@@ -369,9 +369,9 @@ const Keynotes: React.FC = () => {
   // ============================================================
 
   // Projets filtrés pour le tableau — si un projet est sélectionné, on n'affiche que lui
-  const projetsPourTableau = idProjetSelectionne
-    ? projets.filter((p) => p.id === idProjetSelectionne)
-    : projets;
+  // Tous les projets sont toujours affichés dans le tableau
+  // La sélection dans le formulaire n'affecte pas la visibilité
+  const projetsPourTableau = projets;
 
   // Suggestions de recherche — catégories ou notes selon le type sélectionné
   const suggestionsCategorieRecherche: Categorie[] =
