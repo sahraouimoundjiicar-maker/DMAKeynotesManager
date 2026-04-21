@@ -1023,7 +1023,13 @@ const Keynotes: React.FC = () => {
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleCategorie(categorie.id);
-                      selectionnerCategorie(categorie);
+                      // Si la catégorie est déjà sélectionnée → vider le formulaire
+                      // Sinon → la sélectionner et charger ses données
+                      if (categorieSelectionnee?.id === categorie.id) {
+                        reinitialiserFormulaires();
+                      } else {
+                        selectionnerCategorie(categorie);
+                      }
                     }}
                   >
                     <td colSpan={2}>
