@@ -368,11 +368,6 @@ const Keynotes: React.FC = () => {
   // SECTION 6 — DONNÉES DÉRIVÉES
   // ============================================================
 
-  // Catégories du projet sélectionné, triées numériquement
-  const categoriesProjetActuel = idProjetSelectionne
-    ? trierParNumero(categories.filter((c) => c.id_projet === idProjetSelectionne))
-    : [];
-
   // Projets filtrés pour le tableau — si un projet est sélectionné, on n'affiche que lui
   const projetsPourTableau = idProjetSelectionne
     ? projets.filter((p) => p.id === idProjetSelectionne)
