@@ -225,7 +225,7 @@ h2 {
 .cell-title {
     font-size: 11px;
     font-weight: 600;
-    color: #666;
+    color: #888;
     letter-spacing: 0.6px;
     text-transform: uppercase;
     margin-bottom: 10px;
@@ -434,7 +434,7 @@ h2 {
     outline: none;
     transition: border-color 0.15s;
     background-color: transparent;
-    color: #222;
+    color: #333;
 }
 
 .form-input:focus {
@@ -451,7 +451,7 @@ h2 {
     background-color: transparent;
     border-bottom-color: #f0f0f0;
     cursor: default;
-    color: #999;
+    color: #bbb;
 }
 
 /* Message d'erreur de validation sous les champs */
@@ -955,14 +955,14 @@ h2 {
     background-color: #fff;
     font-size: 11px;
     font-weight: 600;
-    color: #666;
+    color: #888;
     letter-spacing: 0.6px;
     text-transform: uppercase;
     border-bottom: 1px solid #e8e8e8;
 }
 
 .data-table td {
-    color: #222;
+    color: #333;
     font-size: 13px;
     font-weight: 400;
 }
@@ -1322,7 +1322,7 @@ h2 {
 .nav-lien {
     font-size      : 12px;
     font-weight    : 500;
-    color          : #666;
+    color          : #888;
     text-decoration: none;
     letter-spacing : 0.6px;
     text-transform : uppercase;

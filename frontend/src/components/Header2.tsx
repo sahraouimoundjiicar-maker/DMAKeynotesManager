@@ -126,7 +126,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   userEmail: {
     fontSize    : '12px',
-    color       : '#777',
+    color       : '#aaa',
     maxWidth    : '180px',
     overflow    : 'hidden',
     textOverflow: 'ellipsis',
