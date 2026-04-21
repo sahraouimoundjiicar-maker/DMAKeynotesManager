@@ -577,16 +577,13 @@ const Keynotes: React.FC = () => {
   // ============================================================
 
   function selectionnerCategorie(categorie: Categorie) {
-    // Sélectionner le projet automatiquement si pas encore sélectionné
-    // et charger ses catégories/notes si absentes
-    if (idProjetSelectionne !== categorie.id_projet) {
-      setIdProjetSelectionne(categorie.id_projet);
-      const categoriesDejaChargees = categories.some(
-        (c) => c.id_projet === categorie.id_projet
-      );
-      if (!categoriesDejaChargees) {
-        chargerCategoriesEtNotes(categorie.id_projet);
-      }
+    // Toujours mettre à jour le projet sélectionné
+    setIdProjetSelectionne(categorie.id_projet);
+    const categoriesDejaChargees = categories.some(
+      (c) => c.id_projet === categorie.id_projet
+    );
+    if (!categoriesDejaChargees) {
+      chargerCategoriesEtNotes(categorie.id_projet);
     }
 
     setTypeSelection('categorie');
@@ -631,16 +628,13 @@ const Keynotes: React.FC = () => {
   // ============================================================
 
   function selectionnerNote(note: Note) {
-    // Sélectionner le projet automatiquement si pas encore sélectionné
-    // et charger ses catégories/notes si absentes
-    if (idProjetSelectionne !== note.id_projet) {
-      setIdProjetSelectionne(note.id_projet);
-      const categoriesDejaChargees = categories.some(
-        (c) => c.id_projet === note.id_projet
-      );
-      if (!categoriesDejaChargees) {
-        chargerCategoriesEtNotes(note.id_projet);
-      }
+    // Toujours mettre à jour le projet sélectionné
+    setIdProjetSelectionne(note.id_projet);
+    const categoriesDejaChargees = categories.some(
+      (c) => c.id_projet === note.id_projet
+    );
+    if (!categoriesDejaChargees) {
+      chargerCategoriesEtNotes(note.id_projet);
     }
 
     // Charger la catégorie parente de la note dans le formulaire Catégorie
