@@ -720,9 +720,31 @@ const Keynotes: React.FC = () => {
       setModeNote('lecture');
       afficherNotification('Modifications annulées', 'warning');
     } else {
-      // Réinitialiser tout — vider toutes les cellules
+      // Réinitialiser tout — vider toutes les cellules et fermer le tableau
+      const idProjet    = idProjetSelectionne;
+      const idCategorie = categorieSelectionnee?.id ?? noteSelectionnee?.id_categorie;
+
       setIdProjetSelectionne(null);
       reinitialiserFormulaires();
+
+      // Fermer le projet et la catégorie dans le tableau
+      setEtatCollapse((prev) => {
+        const newCollapse = { ...prev };
+        if (idProjet) {
+          newCollapse.projetsCollapsed = {
+            ...prev.projetsCollapsed,
+            [idProjet]: true,
+          };
+        }
+        if (idCategorie) {
+          newCollapse.categoriesCollapsed = {
+            ...prev.categoriesCollapsed,
+            [idCategorie]: true,
+          };
+        }
+        return newCollapse;
+      });
+
       afficherNotification('Sélection annulée', 'info');
     }
   }
