@@ -516,27 +516,10 @@ const Keynotes: React.FC = () => {
     setIdProjetSelectionne(idProjet);
     reinitialiserFormulaires();
 
-    if (idProjet === null) {
-      // Aucun projet — ferme tout dans le tableau
-      setEtatCollapse((prev) => {
-        const collapsed = { ...prev.projetsCollapsed };
-        Object.keys(collapsed).forEach((k) => { collapsed[Number(k)] = true; });
-        return { ...prev, projetsCollapsed: collapsed };
-      });
-      return;
-    }
+    if (idProjet === null) return;
 
     // Charge les catégories et notes du projet sélectionné
     await chargerCategoriesEtNotes(idProjet);
-
-    // Ouvre le projet sélectionné dans le tableau, ferme les autres
-    setEtatCollapse((prev) => {
-      const newProjetsCollapsed = { ...prev.projetsCollapsed };
-      Object.keys(newProjetsCollapsed).forEach((k) => {
-        newProjetsCollapsed[Number(k)] = Number(k) !== idProjet;
-      });
-      return { ...prev, projetsCollapsed: newProjetsCollapsed };
-    });
   }
 
   // ============================================================
@@ -656,17 +639,24 @@ const Keynotes: React.FC = () => {
       }
     }
 
+    // Charger la catégorie parente de la note dans le formulaire Catégorie
+    const categorieParente = categories.find((c) => c.id === note.id_categorie) ?? null;
+
     setTypeSelection('note');
     setNoteSelectionnee(note);
-    setCategorieSelectionnee(null);
+    setCategorieSelectionnee(categorieParente);
     setModeNote('lecture');
-    setModeCategorie('creation');
+    setModeCategorie('lecture');
     setFormNote({
       idCategorie: note.id_categorie,
       numero: note.numero,
       description: note.description,
     });
-    setFormCategorie(FORM_CATEGORIE_VIDE);
+    setFormCategorie(
+      categorieParente
+        ? { numero: categorieParente.numero, description: categorieParente.description }
+        : FORM_CATEGORIE_VIDE
+    );
     setTexteRecherche(
       `${note.numero} — ${note.description.substring(0, 50)}${note.description.length > 50 ? '...' : ''}`
     );
@@ -1033,13 +1023,6 @@ const Keynotes: React.FC = () => {
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleCategorie(categorie.id);
-                    }}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      // Sélectionne automatiquement le projet si pas encore sélectionné
-                      if (idProjetSelectionne !== categorie.id_projet) {
-                        setIdProjetSelectionne(categorie.id_projet);
-                      }
                       selectionnerCategorie(categorie);
                     }}
                   >
