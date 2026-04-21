@@ -1302,19 +1302,23 @@ h2 {
    ============================================ */
 
 .nav-lien {
-    font-size      : 14px;
+    font-size      : 12px;
     font-weight    : 500;
-    color          : #333;
+    color          : #888;
     text-decoration: none;
+    letter-spacing : 0.6px;
+    text-transform : uppercase;
     padding        : 4px 0;
+    transition     : color 0.15s;
 }
 
 .nav-lien:hover {
-    text-decoration: underline;
+    color          : #333;
+    text-decoration: none;
 }
 
 .nav-lien-actif {
     color          : #090ea0;
-    text-decoration: underline;
+    font-weight    : 600;
 }
 
