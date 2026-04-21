@@ -883,15 +883,6 @@ const Projets: React.FC = () => {
 
           <div className="grid-4x3">
 
-            {/* LIGNE 1 — Titre (4 colonnes fusionnées) */}
-            <div className="cell-merged cell-merged-4">
-              <h2 style={{ margin: 0, fontSize: '20px', color: '#333' }}>
-                {modeFormulaire === 'creation' && 'Nouveau projet'}
-                {modeFormulaire === 'lecture' && `Projet : ${projetSelectionne?.nom}`}
-                {modeFormulaire === 'edition' && `Modifier : ${projetSelectionne?.nom}`}
-              </h2>
-            </div>
-
             {/* CELLULE 1 — Nom du projet */}
             <div className="cell-form">
               <label className="cell-title" htmlFor="champ-nom-projet">
@@ -926,7 +917,7 @@ const Projets: React.FC = () => {
 
             {/* CELLULE 3 — Chercher utilisateur à ajouter */}
             <div className="cell-form">
-              <label className="form-label" htmlFor="recherche-utilisateur-projet">
+              <label className="cell-title" htmlFor="recherche-utilisateur-projet">
                 Chercher utilisateur
               </label>
               <ChampRecherche<UtilisateurAPI>
