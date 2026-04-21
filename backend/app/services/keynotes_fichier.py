@@ -616,35 +616,74 @@ def _parser_fichier_txt(contenu_txt: str) -> list[dict]:
     #   Col 2 : description
     #   Col 3 : numéro parent (vide = catégorie, sinon note)
     keynotes_par_categorie = {}
-    ordre_categories = []
+    ordre_categories       = []
 
-    # Dernière entrée traitée — pour fusionner les descriptions multi-lignes
-    # Une continuation est une ligne dont la 1re colonne n'est pas un Key Value Revit
-    derniere_entree: dict | None = None
+    # derniere_entree : pointeur vers la dernière entrée pour les continuations
+    # entree_en_attente : note dont le parent n'a pas encore été trouvé
+    #   → le parent sera sur la dernière ligne de continuation
+    derniere_entree  : dict | None = None
+    entree_en_attente: dict | None = None
 
     for numero_ligne, ligne in enumerate(lignes, 1):
-        colonnes = ligne.split(SEPARATEUR_COLONNES_TXT)
+        colonnes         = ligne.split(SEPARATEUR_COLONNES_TXT)
+        premiere_colonne = colonnes[0].strip()
 
         # Détecter si c'est une ligne de continuation :
-        # — 1 seule colonne, OU
-        # — première colonne non vide mais pas un numéro Revit valide
-        premiere_colonne = colonnes[0].strip()
+        # — Pas de tabulation → continuation évidente
+        # — Tabulation présente mais 1re colonne n'est pas un Key Value Revit
+        #   (Key Value = court ≤20 chars, sans espace, alphanumérique/tiret/point)
+        # Ex continuations : "1. Sur la face...", "6. Une fois...", "- Dalle..."
+        # Ex vrais Key Values : "A00", "206", "D200", "13038.A1"
+        est_key_value = bool(
+            re.match(r'^[\w\.\-]{1,20}$', premiere_colonne)
+        )
         est_continuation = (
             derniere_entree is not None
-            and premiere_colonne
-            and not re.match(r'^(D?A?)\d+$', premiere_colonne.upper())
+            and (SEPARATEUR_COLONNES_TXT not in ligne or not est_key_value)
         )
 
         if est_continuation:
-            # Reconstituer le texte complet de la ligne (toutes colonnes)
-            texte_continuation = ' '.join(c.strip() for c in colonnes if c.strip())
-            if texte_continuation:
-                obj   = derniere_entree["description_ref"]
-                champ = derniere_entree["champ"]
-                obj[champ] += " " + texte_continuation
+            # Vérifier si c'est la dernière ligne de continuation
+            # — elle contient le parent dans sa dernière colonne
+            parent_ligne = colonnes[-1].strip() if len(colonnes) > 1 else ""
+            est_derniere = (
+                entree_en_attente is not None
+                and parent_ligne
+                and parent_ligne in keynotes_par_categorie
+            )
+
+            if est_derniere:
+                # Dernière ligne — texte = toutes colonnes sauf la dernière (parent)
+                texte    = ' '.join(c.strip() for c in colonnes[:-1] if c.strip())
+                note     = entree_en_attente["note"]
+                cat_temp = entree_en_attente.get("cat_temporaire")
+                # Fusionner le texte de cette dernière ligne dans la description
+                if texte:
+                    note["description"] += " " + texte
+                # Retirer la catégorie temporaire créée par erreur
+                if cat_temp and cat_temp in keynotes_par_categorie:
+                    del keynotes_par_categorie[cat_temp]
+                    ordre_categories.remove(cat_temp)
+                # Assigner la note à la bonne catégorie maintenant qu'on a le parent
+                keynotes_par_categorie[parent_ligne]["notes"].append(note)
+                derniere_entree   = {"description_ref": note, "champ": "description"}
+                entree_en_attente = None
+            else:
+                # Continuation simple — fusionner le texte dans la note en attente
+                # (pas dans la catégorie temporaire) ou dans derniere_entree
+                texte = ' '.join(c.strip() for c in colonnes if c.strip())
+                if texte:
+                    if entree_en_attente is not None:
+                        entree_en_attente["note"]["description"] += " " + texte
+                    else:
+                        obj = derniere_entree["description_ref"]
+                        obj[derniere_entree["champ"]] += " " + texte
             continue
 
-        # Ligne malformée sans entrée précédente — ignorer
+        # Nouvelle entrée — réinitialiser l'attente
+        entree_en_attente = None
+
+        # Ligne avec moins de 2 colonnes et pas de continuation — ignorer
         if len(colonnes) < 2:
             logger.warning(
                 f"Import : ligne {numero_ligne} ignorée — "
@@ -665,7 +704,14 @@ def _parser_fichier_txt(contenu_txt: str) -> list[dict]:
             continue
 
         if parent == "":
-            # 3e colonne vide → catégorie racine
+            # 3e colonne vide → catégorie racine OU note dont le parent
+            # viendra sur la dernière ligne de continuation
+            note_temp = {"numero": numero, "description": description}
+            entree_en_attente = {
+                "note"         : note_temp,
+                "cat_temporaire": numero,
+            }
+            # Créer une catégorie temporaire qui sera retirée si un parent est trouvé
             entree = {
                 "numero_categorie"     : numero,
                 "description_categorie": description,
