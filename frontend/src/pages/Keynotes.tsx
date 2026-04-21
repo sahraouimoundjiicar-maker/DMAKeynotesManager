@@ -543,7 +543,9 @@ const Keynotes: React.FC = () => {
   // SECTION 11 — TOGGLE COLLAPSE TABLEAU
   // ============================================================
 
-  function toggleProjet(idProjet: number) {
+  async function toggleProjet(idProjet: number) {
+    const estDejaSelectionne = idProjetSelectionne === idProjet;
+
     // Ouvrir/fermer le projet dans le tableau
     setEtatCollapse((prev) => ({
       ...prev,
@@ -553,13 +555,9 @@ const Keynotes: React.FC = () => {
       },
     }));
 
-    // Si le projet n'a pas encore ses catégories chargées,
-    // les charger maintenant pour les afficher dans le tableau
-    const categoriesDejaChargees = categories.some(
-      (c) => c.id_projet === idProjet
-    );
-    if (!categoriesDejaChargees) {
-      chargerCategoriesEtNotes(idProjet);
+    // Sélectionner le projet dans le formulaire si pas déjà sélectionné
+    if (!estDejaSelectionne) {
+      await changerProjet(idProjet);
     }
   }
 
