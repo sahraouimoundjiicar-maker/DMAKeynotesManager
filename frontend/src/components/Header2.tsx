@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 
 // ============================================================
 // SECTION 1 — COMPOSANT HEADER
-// Style sobre et léger — dashboard SaaS minimaliste
+// Navigation minimaliste — même largeur que .container
 // ============================================================
 
 interface PropsHeader {
@@ -27,9 +27,11 @@ export default function Header({ titre }: PropsHeader) {
       <header style={styles.header}>
 
         {/* Titre de la page */}
-        <span style={styles.logo}>{titre}</span>
+        <span style={styles.logo}>
+          {titre}
+        </span>
 
-        {/* Navigation centrale */}
+        {/* Navigation */}
         <nav style={styles.nav}>
           <NavLink
             to="/projets"
@@ -64,12 +66,9 @@ export default function Header({ titre }: PropsHeader) {
         {/* Utilisateur + Déconnexion */}
         <div style={styles.userZone}>
           <span style={styles.userEmail}>{userEmail}</span>
-          <span style={styles.separateur}>·</span>
           <span
             style={styles.lienDeconnexion}
             onClick={seDeconnecter}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#333')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#999')}
           >
             Déconnexion
           </span>
@@ -81,7 +80,8 @@ export default function Header({ titre }: PropsHeader) {
 }
 
 // ============================================================
-// SECTION 2 — STYLES INLINE
+// SECTION 2 — STYLES
+// Même contraintes que .container : max-width 1400px, centré
 // ============================================================
 
 const styles: Record<string, React.CSSProperties> = {
@@ -89,7 +89,8 @@ const styles: Record<string, React.CSSProperties> = {
   wrapper: {
     width          : '100%',
     backgroundColor: '#fff',
-    borderBottom   : '1px solid #f0f0f0',
+    borderBottom   : '1px solid #e0e0e0',
+    boxShadow      : '0 1px 3px rgba(0,0,0,0.08)',
     marginBottom   : '16px',
   },
 
@@ -98,52 +99,47 @@ const styles: Record<string, React.CSSProperties> = {
     width         : '100%',
     margin        : '0 auto',
     padding       : '0 32px',
-    height        : '48px',
+    height        : '54px',
     display       : 'flex',
     alignItems    : 'center',
     justifyContent: 'space-between',
   },
 
   logo: {
-    fontSize     : '15px',
-    fontWeight   : 600,
-    color        : '#222',
-    letterSpacing: '0.2px',
+    fontSize     : '18px',
+    fontWeight   : 700,
+    color        : '#090ea0',
+    letterSpacing: '0.3px',
     whiteSpace   : 'nowrap',
   },
 
   nav: {
     display   : 'flex',
-    gap       : '32px',
+    gap       : '24px',
     alignItems: 'center',
   },
 
   userZone: {
     display   : 'flex',
     alignItems: 'center',
-    gap       : '8px',
+    gap       : '16px',
   },
 
   userEmail: {
-    fontSize    : '12px',
-    color       : '#aaa',
-    maxWidth    : '180px',
+    fontSize    : '13px',
+    color       : '#777',
+    maxWidth    : '200px',
     overflow    : 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace  : 'nowrap',
   },
 
-  separateur: {
-    fontSize: '12px',
-    color   : '#ddd',
-  },
-
   lienDeconnexion: {
-    fontSize      : '12px',
-    color         : '#999',
+    fontSize      : '13px',
+    fontWeight    : 500,
+    color         : '#d93025',
     cursor        : 'pointer',
-    textDecoration: 'none',
-    transition    : 'color 0.15s',
+    textDecoration: 'underline',
   },
 
 };

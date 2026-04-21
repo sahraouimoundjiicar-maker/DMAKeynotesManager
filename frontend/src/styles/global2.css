@@ -228,7 +228,7 @@ h2 {
 .cell-number {
     font-size: 18px;
     font-weight: 600;
-    color: #1a73e8;
+    color: #090ea0;
     text-align: center;
     display: flex;
     align-items: center;
@@ -268,7 +268,7 @@ h2 {
 }
 
 .project-select:focus {
-    border-color: #1a73e8;
+    border-color: #090ea0;
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
@@ -292,7 +292,7 @@ h2 {
 }
 
 .category-select:focus {
-    border-color: #1a73e8;
+    border-color: #090ea0;
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
@@ -316,7 +316,7 @@ h2 {
 }
 
 .categorie-numero:focus {
-    border-color: #1a73e8;
+    border-color: #090ea0;
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
@@ -343,7 +343,7 @@ h2 {
 }
 
 .categorie-titre:focus {
-    border-color: #1a73e8;
+    border-color: #090ea0;
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
@@ -372,7 +372,7 @@ h2 {
 }
 
 .input-number:focus {
-    border-color: #1a73e8;
+    border-color: #090ea0;
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
@@ -395,7 +395,7 @@ h2 {
 }
 
 .textarea-description:focus {
-    border-color: #1a73e8;
+    border-color: #090ea0;
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
@@ -428,7 +428,7 @@ h2 {
 }
 
 .form-input:focus {
-    border-color: #1a73e8;
+    border-color: #090ea0;
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
@@ -490,7 +490,7 @@ h2 {
 }
 
 .search-input:focus {
-    border-color: #1a73e8;
+    border-color: #090ea0;
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
@@ -566,7 +566,7 @@ h2 {
 }
 
 .suggestion-item strong {
-    color: #1a73e8;
+    color: #090ea0;
 }
 
 .suggestion-item small {
@@ -603,7 +603,7 @@ h2 {
 }
 
 .search-type-select:focus {
-    border-color: #1a73e8;
+    border-color: #090ea0;
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
@@ -650,8 +650,8 @@ h2 {
 }
 
 .btn-primary {
-    background-color: #1a73e8;
-    border-color: #1a73e8;
+    background-color: #090ea0;
+    border-color: #090ea0;
     color: white;
 }
 
@@ -1029,7 +1029,7 @@ h2 {
 
 .badge-admin {
     background-color: #e8f4fd;
-    color: #1a73e8;
+    color: #090ea0;
 }
 
 .badge-user {
@@ -1220,7 +1220,7 @@ h2 {
 }
 
 .switch-link {
-    color: #1a73e8;
+    color: #090ea0;
     cursor: pointer;
     text-decoration: none;
     font-weight: 500;
@@ -1296,3 +1296,25 @@ h2 {
     cursor: not-allowed;
     pointer-events: none;
 }
+
+/* ============================================
+   HEADER — LIENS DE NAVIGATION
+   ============================================ */
+
+.nav-lien {
+    font-size      : 14px;
+    font-weight    : 500;
+    color          : #333;
+    text-decoration: none;
+    padding        : 4px 0;
+}
+
+.nav-lien:hover {
+    text-decoration: underline;
+}
+
+.nav-lien-actif {
+    color          : #090ea0;
+    text-decoration: underline;
+}
+
