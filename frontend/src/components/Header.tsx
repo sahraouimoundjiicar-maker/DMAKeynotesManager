@@ -115,7 +115,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   nav: {
     display   : 'flex',
-    gap       : '4px',
+    gap       : '24px',
     alignItems: 'center',
   },
 
