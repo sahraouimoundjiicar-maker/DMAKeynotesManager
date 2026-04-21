@@ -899,22 +899,6 @@ const Projets: React.FC = () => {
               />
             </div>
 
-            {/* CELLULE 1 — Nom du projet */}
-            <div className="cell-form">
-              <label className="cell-title" htmlFor="champ-nom-projet">
-                Nom du projet
-              </label>
-              <input
-                type="text"
-                id="champ-nom-projet"
-                className="form-input"
-                placeholder="Saisissez le nom du projet"
-                value={formulaire.nomProjet}
-                readOnly={!formulaireEstModifiable}
-                onChange={(e) => setFormulaire({ ...formulaire, nomProjet: e.target.value })}
-              />
-            </div>
-
             {/* CELLULE 2 — Chemin d'export */}
             <div className="cell-form">
               <label className="cell-title" htmlFor="champ-chemin-export">
