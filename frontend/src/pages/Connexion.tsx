@@ -447,7 +447,7 @@ const Connexion: React.FC = () => {
                 <input
                   type="email"
                   className={`form-input ${errors.email ? 'error' : ''}`}
-                  placeholder="jean.dupont@dma.com"
+                  placeholder="votre@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
