@@ -392,7 +392,12 @@ const Projets: React.FC = () => {
 
     async function initialiser() {
       setIsLoading(true);
-      await Promise.all([chargerProjets(), chargerUtilisateurs()]);
+      // Charger les utilisateurs uniquement pour le super_admin
+      if (estSuperAdmin) {
+        await Promise.all([chargerProjets(), chargerUtilisateurs()]);
+      } else {
+        await chargerProjets();
+      }
       setIsLoading(false);
     }
 
