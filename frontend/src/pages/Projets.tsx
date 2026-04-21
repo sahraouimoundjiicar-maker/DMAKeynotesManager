@@ -883,10 +883,10 @@ const Projets: React.FC = () => {
 
           <div className="grid-4x3">
 
-            {/* CELLULE 1 — Nom du projet */}
+            {/* CELLULE 1 — Nom du projet/}
             <div className="cell-form">
               <label className="cell-title" htmlFor="champ-nom-projet">
-                Nom du projet *
+                Nom du projet
               </label>
               <input
                 type="text"
@@ -962,7 +962,7 @@ const Projets: React.FC = () => {
 
             {/* CELLULE 3 — Liste des utilisateurs avec accès */}
             <div className="cell-users">
-              <div className="users-title">Utilisateurs avec accès</div>
+              <label className="cell-title">Utilisateurs avec accès</label>
               <div className="users-list">
                 {utilisateursAcces.length === 0 ? (
                   <div className="empty-list">Aucun utilisateur</div>
@@ -988,7 +988,7 @@ const Projets: React.FC = () => {
 
             {/* CELLULE 4 — Rechercher projet existant */}
             <div className="cell-form">
-              <div className="cell-title">Chercher projet existant</div>
+              <div className="cell-title">Chercher projet</div>
               <ChampRecherche<Projet>
                 id="recherche-projet"
                 placeholder="Rechercher un projet par son nom..."
