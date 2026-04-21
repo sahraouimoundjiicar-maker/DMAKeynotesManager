@@ -545,13 +545,15 @@ const Keynotes: React.FC = () => {
   }
 
   function toggleCategorie(idCategorie: number) {
-    setEtatCollapse((prev) => ({
-      ...prev,
-      categoriesCollapsed: {
-        ...prev.categoriesCollapsed,
-        [idCategorie]: !prev.categoriesCollapsed[idCategorie],
-      },
-    }));
+    setEtatCollapse((prev) => {
+      // Fermer toutes les catégories, puis ouvrir/fermer celle cliquée
+      const nouvellesCategoriesCollapsed = { ...prev.categoriesCollapsed };
+      Object.keys(nouvellesCategoriesCollapsed).forEach((k) => {
+        nouvellesCategoriesCollapsed[Number(k)] = true;
+      });
+      nouvellesCategoriesCollapsed[idCategorie] = !prev.categoriesCollapsed[idCategorie];
+      return { ...prev, categoriesCollapsed: nouvellesCategoriesCollapsed };
+    });
   }
 
   // ============================================================
