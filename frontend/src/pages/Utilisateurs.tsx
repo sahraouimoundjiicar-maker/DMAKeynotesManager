@@ -943,10 +943,6 @@ const Utilisateurs: React.FC = () => {
                 </button>
               </div>
             </div>
-
-            {/* LIGNE 3 — Col 1+2+3+4+5 : Vide */}
-            <div className="cell cell-span-5" />
-          </div>
         </div>
 
         {/* -------------------------------------------------- */}
