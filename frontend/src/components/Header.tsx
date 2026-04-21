@@ -35,20 +35,18 @@ export default function Header({ titre }: PropsHeader) {
         <nav style={styles.nav}>
           <NavLink
             to="/projets"
-            style={({ isActive }: { isActive: boolean }) => ({
-              ...styles.lien,
-              ...(isActive ? styles.lienActif : {}),
-            })}
+            className={({ isActive }: { isActive: boolean }) =>
+              isActive ? 'nav-lien nav-lien-actif' : 'nav-lien'
+            }
           >
             Projets
           </NavLink>
 
           <NavLink
             to="/keynotes"
-            style={({ isActive }: { isActive: boolean }) => ({
-              ...styles.lien,
-              ...(isActive ? styles.lienActif : {}),
-            })}
+            className={({ isActive }: { isActive: boolean }) =>
+              isActive ? 'nav-lien nav-lien-actif' : 'nav-lien'
+            }
           >
             Keynotes
           </NavLink>
@@ -56,10 +54,9 @@ export default function Header({ titre }: PropsHeader) {
           {estSuperAdmin && (
             <NavLink
               to="/utilisateurs"
-              style={({ isActive }: { isActive: boolean }) => ({
-                ...styles.lien,
-                ...(isActive ? styles.lienActif : {}),
-              })}
+              className={({ isActive }: { isActive: boolean }) =>
+                isActive ? 'nav-lien nav-lien-actif' : 'nav-lien'
+              }
             >
               Utilisateurs
             </NavLink>
@@ -120,22 +117,6 @@ const styles: Record<string, React.CSSProperties> = {
     display   : 'flex',
     gap       : '4px',
     alignItems: 'center',
-  },
-
-  lien: {
-    padding       : '6px 16px',
-    fontSize      : '14px',
-    fontWeight    : 500,
-    color         : '#555',
-    textDecoration: 'none',
-    borderRadius  : '6px',
-    transition    : 'background 0.15s, color 0.15s',
-  },
-
-  lienActif: {
-    color          : '#090ea0',
-    backgroundColor: '#e8eaf6',
-    fontWeight     : 600,
   },
 
   userZone: {

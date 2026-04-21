@@ -1296,3 +1296,25 @@ h2 {
     cursor: not-allowed;
     pointer-events: none;
 }
+
+/* ============================================
+   HEADER — LIENS DE NAVIGATION
+   ============================================ */
+
+.nav-lien {
+    font-size      : 14px;
+    font-weight    : 500;
+    color          : #333;
+    text-decoration: none;
+    padding        : 4px 0;
+}
+
+.nav-lien:hover {
+    text-decoration: underline;
+}
+
+.nav-lien-actif {
+    color          : #090ea0;
+    text-decoration: underline;
+}
+
