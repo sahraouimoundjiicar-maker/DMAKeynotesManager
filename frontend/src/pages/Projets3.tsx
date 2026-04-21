@@ -1022,11 +1022,10 @@ const Projets: React.FC = () => {
               />
             </div>
 
-            {/* LIGNE 2 — Col 2+3 vides pour utilisateur ordinaire */}
-            {!estSuperAdmin && <div className="cell-merged cell-merged-2" style={{ visibility: 'hidden' }} />}
-
-            {/* LIGNE 2/3 — Boutons d'action */}
-            <div className={estSuperAdmin ? "cell-merged cell-merged-3" : "cell-merged"}>
+            {/* LIGNE 3 — Boutons d'action (3 colonnes fusionnées) */}
+            {/* Contient tous les boutons : Importer, Exporter, Modifier, */}
+            {/* Enregistrer, Annuler, Supprimer                           */}
+            <div className="cell-merged cell-merged-3">
               <div className="button-group">
                 {/* Super admin — Modifier / Enregistrer / Annuler / Supprimer */}
                 {estSuperAdmin && (
