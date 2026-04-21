@@ -1175,31 +1175,6 @@ const Keynotes: React.FC = () => {
             <div className="cell-span-3">
               <div className="cell-title">Note</div>
               <div className="input-group-note">
-                {/* Select catégorie pour la note */}
-                <select
-                  id="noteCategorieSelect"
-                  className="category-select"
-                  value={formNote.idCategorie ?? ''}
-                  disabled={!noteEstModifiable || !idProjetSelectionne}
-                  onChange={(e) =>
-                    setFormNote({
-                      ...formNote,
-                      idCategorie: e.target.value === '' ? null : parseInt(e.target.value),
-                    })
-                  }
-                >
-                  <option value="">
-                    {idProjetSelectionne
-                      ? '— Sélectionner une catégorie —'
-                      : '— Sélectionner un projet d\'abord —'}
-                  </option>
-                  {categoriesProjetActuel.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.numero} — {c.description}
-                    </option>
-                  ))}
-                </select>
-
                 <input
                   type="text"
                   id="noteNumero"
