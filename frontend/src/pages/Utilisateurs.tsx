@@ -751,7 +751,7 @@ const Utilisateurs: React.FC = () => {
             {/* CELLULE 1 — Nom */}
             <div className="cell">
               <label className="cell-title" htmlFor="champ-nom">
-                Nom <span className="required-star">*</span>
+                Nom
               </label>
               <input
                 type="text"
@@ -767,7 +767,7 @@ const Utilisateurs: React.FC = () => {
             {/* CELLULE 2 — Prénom */}
             <div className="cell">
               <label className="cell-title" htmlFor="champ-prenom">
-                Prénom <span className="required-star">*</span>
+                Prénom
               </label>
               <input
                 type="text"
@@ -783,7 +783,7 @@ const Utilisateurs: React.FC = () => {
             {/* CELLULE 3 — Email */}
             <div className="cell">
               <label className="cell-title" htmlFor="champ-email">
-                Email <span className="required-star">*</span>
+                Email
               </label>
               <input
                 type="email"
@@ -824,7 +824,7 @@ const Utilisateurs: React.FC = () => {
             {/* CELLULE 5 — Statut */}
             <div className="cell">
               <label className="cell-title" htmlFor="champ-statut">
-                Statut <span className="required-star">*</span>
+                Statut
               </label>
               <select
                 id="champ-statut"
