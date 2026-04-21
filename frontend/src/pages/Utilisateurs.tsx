@@ -745,7 +745,7 @@ const Utilisateurs: React.FC = () => {
         {/* SECTION FORMULAIRE — Grille 5x3                    */}
         {/* -------------------------------------------------- */}
         <div className="section">
-          <Header />
+          <Header titre="Utilisateurs" />
           <div className="section-header">
             <h2>Gestion des utilisateurs</h2>
           </div>

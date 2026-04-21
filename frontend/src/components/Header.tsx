@@ -5,7 +5,11 @@ import { NavLink } from 'react-router-dom';
 // Navigation minimaliste — même largeur que .container
 // ============================================================
 
-export default function Header() {
+interface PropsHeader {
+  titre: string;
+}
+
+export default function Header({ titre }: PropsHeader) {
 
   const userRole      = localStorage.getItem('user_role') ?? '';
   const userEmail     = localStorage.getItem('user_email') ?? '';
@@ -22,16 +26,16 @@ export default function Header() {
     <div style={styles.wrapper}>
       <header style={styles.header}>
 
-        {/* Logo */}
+        {/* Titre de la page */}
         <span style={styles.logo}>
-          DMA Keynote Manager
+          {titre}
         </span>
 
         {/* Navigation */}
         <nav style={styles.nav}>
           <NavLink
             to="/projets"
-            style={({ isActive }) => ({
+            style={({ isActive }: { isActive: boolean }) => ({
               ...styles.lien,
               ...(isActive ? styles.lienActif : {}),
             })}
@@ -41,7 +45,7 @@ export default function Header() {
 
           <NavLink
             to="/keynotes"
-            style={({ isActive }) => ({
+            style={({ isActive }: { isActive: boolean }) => ({
               ...styles.lien,
               ...(isActive ? styles.lienActif : {}),
             })}
@@ -52,7 +56,7 @@ export default function Header() {
           {estSuperAdmin && (
             <NavLink
               to="/utilisateurs"
-              style={({ isActive }) => ({
+              style={({ isActive }: { isActive: boolean }) => ({
                 ...styles.lien,
                 ...(isActive ? styles.lienActif : {}),
               })}

@@ -12,6 +12,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Header       from '../components/Header';
 import { projetsService, categoriesService, notesService } from '../api/api';
 
 // ============================================================
@@ -1171,6 +1172,7 @@ const Keynotes: React.FC = () => {
         {/* SECTION FORMULAIRE                                  */}
         {/* -------------------------------------------------- */}
         <div className="section">
+          <Header titre="Keynotes" />
           <div className="section-header">
             <h2>Gestion des Keynotes</h2>
           </div>

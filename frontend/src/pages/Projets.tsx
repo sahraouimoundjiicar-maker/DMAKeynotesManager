@@ -7,6 +7,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Header       from '../components/Header';
 import { projetsService, utilisateursService, accesService } from '../api/api';
 
 // ============================================================
@@ -877,11 +878,28 @@ const Projets: React.FC = () => {
         {/* SECTION FORMULAIRE                                  */}
         {/* -------------------------------------------------- */}
         <div className="section">
+          <Header titre="Projets" />
           <div className="section-header">
             <h2>Gestion des projets</h2>
           </div>
 
           <div className="grid-4x3">
+
+            {/* CELLULE 1 — Nom du projet */}
+            <div className="cell-form">
+              <label className="cell-title" htmlFor="champ-nom-projet">
+                Nom du projet
+              </label>
+              <input
+                type="text"
+                id="champ-nom-projet"
+                className="form-input"
+                placeholder="Saisissez le nom du projet"
+                value={formulaire.nomProjet}
+                readOnly={!formulaireEstModifiable}
+                onChange={(e) => setFormulaire({ ...formulaire, nomProjet: e.target.value })}
+              />
+            </div>
 
             {/* CELLULE 1 — Nom du projet */}
             <div className="cell-form">
