@@ -714,28 +714,30 @@ const Keynotes: React.FC = () => {
       setModeNote('lecture');
       afficherNotification('Modifications annulées', 'warning');
     } else {
-      // Réinitialiser tout — vider toutes les cellules et fermer le tableau
+      // Réinitialiser tout — vider toutes les cellules et fermer dans le tableau
       const idProjet    = idProjetSelectionne;
       const idCategorie = categorieSelectionnee?.id ?? noteSelectionnee?.id_categorie;
 
       setIdProjetSelectionne(null);
       reinitialiserFormulaires();
 
-      // Fermer le projet et la catégorie dans le tableau
       setEtatCollapse((prev) => {
         const newCollapse = { ...prev };
-        if (idProjet) {
+
+        if (typeSelection === 'aucun' && idProjet) {
+          // Seulement un projet sélectionné → fermer le projet
           newCollapse.projetsCollapsed = {
             ...prev.projetsCollapsed,
             [idProjet]: true,
           };
-        }
-        if (idCategorie) {
+        } else if (idCategorie) {
+          // Catégorie ou note sélectionnée → fermer uniquement la catégorie
           newCollapse.categoriesCollapsed = {
             ...prev.categoriesCollapsed,
             [idCategorie]: true,
           };
         }
+
         return newCollapse;
       });
 
