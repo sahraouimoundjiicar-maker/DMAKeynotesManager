@@ -1173,10 +1173,6 @@ const Keynotes: React.FC = () => {
         {/* -------------------------------------------------- */}
         <div className="section">
           <Header titre="Keynotes" />
-          <div className="section-header">
-            <h2>Gestion des Keynotes</h2>
-          </div>
-
           <div className="grid-5x2">
 
             {/* CELLULE 1 — Sélecteur de projet */}

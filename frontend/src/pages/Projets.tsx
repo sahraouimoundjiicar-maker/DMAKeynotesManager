@@ -879,10 +879,6 @@ const Projets: React.FC = () => {
         {/* -------------------------------------------------- */}
         <div className="section">
           <Header titre="Projets" />
-          <div className="section-header">
-            <h2>Gestion des projets</h2>
-          </div>
-
           <div className="grid-4x3">
 
             {/* CELLULE 1 — Nom du projet */}
