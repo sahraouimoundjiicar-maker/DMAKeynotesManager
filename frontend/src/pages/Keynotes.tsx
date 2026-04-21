@@ -790,6 +790,23 @@ const Keynotes: React.FC = () => {
     }
 
     // --- CAS 2 : CRÉATION ---
+    // Vérifier les doublons en mémoire avant d'envoyer au backend
+    const numeroNorm      = normaliserChaine(formCategorie.numero.trim());
+    const descriptionNorm = normaliserChaine(formCategorie.description.trim());
+    const doublon = categories
+      .filter((c) => c.id_projet === idProjetSelectionne)
+      .find(
+        (c) =>
+          normaliserChaine(c.numero)      === numeroNorm ||
+          normaliserChaine(c.description) === descriptionNorm
+      );
+    if (doublon) {
+      afficherNotification(
+        `Doublon détecté — le numéro ou le titre existe déjà : "${doublon.numero} — ${doublon.description}"`,
+        'error'
+      );
+      return;
+    }
     try {
       await categoriesService.create(idProjetSelectionne, {
         numero: formCategorie.numero.trim(),
@@ -868,6 +885,24 @@ const Keynotes: React.FC = () => {
     }
 
     // --- CAS 2 : CRÉATION ---
+    // Vérifier les doublons en mémoire avant d'envoyer au backend
+    const noteNumeroNorm = normaliserChaine(formNote.numero.trim());
+    const noteDescNorm   = normaliserChaine(formNote.description.trim());
+    const toutesLesNotes = Object.values(notesParCategorie).flat();
+    const doublonNote = toutesLesNotes
+      .filter((n) => n.id_projet === idProjetSelectionne)
+      .find(
+        (n) =>
+          normaliserChaine(n.numero)      === noteNumeroNorm ||
+          normaliserChaine(n.description) === noteDescNorm
+      );
+    if (doublonNote) {
+      afficherNotification(
+        `Doublon détecté — le numéro ou la description existe déjà : "${doublonNote.numero} — ${doublonNote.description.substring(0, 60)}..."`,
+        'error'
+      );
+      return;
+    }
     try {
       await notesService.create(idProjetSelectionne, formNote.idCategorie, {
         numero: formNote.numero.trim(),
