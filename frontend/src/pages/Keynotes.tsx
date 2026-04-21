@@ -726,13 +726,30 @@ const Keynotes: React.FC = () => {
   // ============================================================
 
   async function handleEnregistrer() {
-    // Détermine si on enregistre une catégorie ou une note selon les champs remplis
-    const categorieARemplir = formCategorie.numero.trim() !== '' || formCategorie.description.trim() !== '';
-    if (categorieARemplir) {
+    // Priorité 1 — mode édition catégorie
+    if (modeCategorie === 'edition') {
       await enregistrerCategorie();
-    } else {
-      await enregistrerNote();
+      return;
     }
+    // Priorité 2 — mode édition note
+    if (modeNote === 'edition') {
+      await enregistrerNote();
+      return;
+    }
+    // Priorité 3 — création note si une catégorie est sélectionnée
+    if (typeSelection === 'categorie' && categorieSelectionnee) {
+      await enregistrerNote();
+      return;
+    }
+    // Priorité 4 — création catégorie si le formulaire catégorie est rempli
+    if (formCategorie.numero.trim() !== '' || formCategorie.description.trim() !== '') {
+      await enregistrerCategorie();
+      return;
+    }
+    afficherNotification(
+      'Veuillez sélectionner une catégorie ou remplir le formulaire',
+      'warning'
+    );
   }
 
   // --- Catégorie ---
