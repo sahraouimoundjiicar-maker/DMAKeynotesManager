@@ -881,43 +881,43 @@ const Projets: React.FC = () => {
           <Header titre="Projets" />
           <div className="grid-4x3">
 
-            {/* CELLULES 1-4 — Super admin uniquement */}
-            {estSuperAdmin && (
-              <>
-                <div className="cell-form">
-                  <label className="cell-title" htmlFor="champ-nom-projet">
-                    Nom du projet
-                  </label>
-                  <input
-                    type="text"
-                    id="champ-nom-projet"
-                    className="form-input"
-                    placeholder="Saisissez le nom du projet"
-                    value={formulaire.nomProjet}
-                    readOnly={!formulaireEstModifiable}
-                    onChange={(e) => setFormulaire({ ...formulaire, nomProjet: e.target.value })}
-                  />
-                </div>
+            {/* CELLULE 1 — Nom du projet */}
+            <div className="cell-form">
+              <label className="cell-title" htmlFor="champ-nom-projet">
+                Nom du projet
+              </label>
+              <input
+                type="text"
+                id="champ-nom-projet"
+                className="form-input"
+                placeholder="Saisissez le nom du projet"
+                value={formulaire.nomProjet}
+                readOnly={!formulaireEstModifiable}
+                onChange={(e) => setFormulaire({ ...formulaire, nomProjet: e.target.value })}
+              />
+            </div>
 
-                <div className="cell-form">
-                  <label className="cell-title" htmlFor="champ-chemin-export">
-                    Chemin d'export
-                  </label>
-                  <input
-                    type="text"
-                    id="champ-chemin-export"
-                    className="form-input"
-                    placeholder="Sélectionner le dossier X - Data de votre projet"
-                    value={formulaire.cheminExport}
-                    readOnly={!formulaireEstModifiable}
-                    onChange={(e) => setFormulaire({ ...formulaire, cheminExport: e.target.value })}
-                  />
-                </div>
+            {/* CELLULE 2 — Chemin d'export */}
+            <div className="cell-form">
+              <label className="cell-title" htmlFor="champ-chemin-export">
+                Chemin d'export
+              </label>
+              <input
+                type="text"
+                id="champ-chemin-export"
+                className="form-input"
+                placeholder="Sélectionner le dossier X - Data de votre projet"
+                value={formulaire.cheminExport}
+                readOnly={!formulaireEstModifiable}
+                onChange={(e) => setFormulaire({ ...formulaire, cheminExport: e.target.value })}
+              />
+            </div>
 
-                <div className="cell-form">
-                  <label className="cell-title" htmlFor="recherche-utilisateur-projet">
-                    Chercher utilisateur
-                  </label>
+            {/* CELLULE 3 — Chercher utilisateur à ajouter */}
+            <div className="cell-form">
+              <label className="cell-title" htmlFor="recherche-utilisateur-projet">
+                Chercher utilisateur
+              </label>
               <ChampRecherche<UtilisateurAPI>
                 id="recherche-utilisateur-projet"
                 placeholder="Nom, prénom ou email..."
@@ -982,11 +982,9 @@ const Projets: React.FC = () => {
                   ))
                 )}
               </div>
-              </div>
-            </>
-            )}
+            </div>
 
-            {/* CELLULE 4 — Rechercher projet (visible par tous) */}
+            {/* CELLULE 4 — Rechercher projet existant */}
             <div className="cell-form">
               <div className="cell-title">Chercher projet</div>
               <ChampRecherche<Projet>
@@ -1022,46 +1020,22 @@ const Projets: React.FC = () => {
             {/* Enregistrer, Annuler, Supprimer                           */}
             <div className="cell-merged cell-merged-3">
               <div className="button-group">
-                {/* Super admin — Modifier / Enregistrer / Annuler / Supprimer */}
-                {estSuperAdmin && (
-                  <button
-                    type="button"
-                    className="action-button"
-                    disabled={!modifierEstActif}
-                    onClick={activerModeEdition}
-                  >
-                    Modifier
-                  </button>
-                )}
-                {estSuperAdmin && (
-                  <button
-                    type="button"
-                    className="action-button"
-                    disabled={!enregistrerEstActif}
-                    onClick={enregistrer}
-                  >
-                    Enregistrer
-                  </button>
-                )}
                 <button
                   type="button"
-                  className="cancel-button"
-                  disabled={!annulerEstActif}
-                  onClick={annuler}
+                  className="action-button"
+                  disabled={!exportImportEstActif}
+                  onClick={exporterProjet}
                 >
-                  Annuler
+                  Exporter
                 </button>
-                {estSuperAdmin && (
-                  <button
-                    type="button"
-                    className="delete-button"
-                    disabled={!supprimerEstActif}
-                    onClick={supprimerProjet}
-                  >
-                    Supprimer
-                  </button>
-                )}
-                {/* Tous — Importer / Exporter */}
+                <button
+                  type="button"
+                  className="action-button"
+                  disabled={!modifierEstActif}
+                  onClick={activerModeEdition}
+                >
+                  Modifier
+                </button>
                 <button
                   type="button"
                   className="action-button"
@@ -1073,10 +1047,26 @@ const Projets: React.FC = () => {
                 <button
                   type="button"
                   className="action-button"
-                  disabled={!exportImportEstActif}
-                  onClick={exporterProjet}
+                  disabled={!enregistrerEstActif}
+                  onClick={enregistrer}
                 >
-                  Exporter
+                  Enregistrer
+                </button>
+                <button
+                  type="button"
+                  className="cancel-button"
+                  disabled={!annulerEstActif}
+                  onClick={annuler}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="delete-button"
+                  disabled={!supprimerEstActif}
+                  onClick={supprimerProjet}
+                >
+                  Supprimer
                 </button>
               </div>
             </div>
