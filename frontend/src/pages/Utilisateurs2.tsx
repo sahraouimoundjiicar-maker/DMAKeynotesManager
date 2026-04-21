@@ -6,7 +6,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Header       from '../components/Header';
 import { utilisateursService, projetsService, accesService } from '../api/api';
 
 // ============================================================
@@ -745,7 +744,6 @@ const Utilisateurs: React.FC = () => {
         {/* SECTION FORMULAIRE — Grille 5x3                    */}
         {/* -------------------------------------------------- */}
         <div className="section">
-          <Header />
           <div className="section-header">
             <h2>Gestion des utilisateurs</h2>
           </div>
