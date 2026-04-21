@@ -608,6 +608,7 @@ const Keynotes: React.FC = () => {
     });
 
     setTexteRecherche(`${categorie.numero} — ${categorie.description}`);
+    setTypeRecherche('categorie');
 
     // Ouvre la catégorie dans le tableau
     setEtatCollapse((prev) => ({
@@ -660,6 +661,7 @@ const Keynotes: React.FC = () => {
     setTexteRecherche(
       `${note.numero} — ${note.description.substring(0, 50)}${note.description.length > 50 ? '...' : ''}`
     );
+    setTypeRecherche('note');
 
     // Ouvre le projet et la catégorie de la note dans le tableau
     setEtatCollapse((prev) => ({
