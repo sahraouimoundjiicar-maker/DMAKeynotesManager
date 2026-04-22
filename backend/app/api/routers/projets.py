@@ -8,7 +8,7 @@ Routes définies :
         → Créer un projet vide (super_admin)
 
     POST   /api/v1/projets/{id}/importer
-        → Importer un fichier .txt (super_admin)
+        → Importer un fichier .txt (tous)
 
     GET    /api/v1/projets
         → Lister tous les projets (tous)
@@ -114,15 +114,15 @@ def creer_projet(
     summary="Importer un fichier .txt Revit",
 )
 def importer_fichier_txt(
-    id_projet: int,
-    donnees  : ImporterProjetModele,
-    admin    : dict = Depends(verifier_super_admin),
+    id_projet   : int,
+    donnees     : ImporterProjetModele,
+    utilisateur : dict = Depends(obtenir_utilisateur_actuel),
 ) -> dict:
     """
     Importe un fichier .txt keynotes Revit dans un projet.
     Modes : 'remplacer' (tout effacer) ou 'fusionner'
     (ajouter uniquement les nouveaux éléments).
-    Réservé au super_admin uniquement.
+    Accessible à tous les utilisateurs connectés.
     """
     # Étape 1.2 — Importer le fichier .txt
     try:
@@ -130,8 +130,8 @@ def importer_fichier_txt(
             id_projet         = id_projet,
             contenu_txt       = donnees.contenu_txt,
             mode              = donnees.mode,
-            effectue_par_id   = admin["id"],
-            effectue_par_role = "super_admin",
+            effectue_par_id   = utilisateur["id"],
+            effectue_par_role = utilisateur["role"],
         )
         return {
             "message"            : (
