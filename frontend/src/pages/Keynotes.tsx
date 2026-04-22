@@ -332,10 +332,6 @@ const Keynotes: React.FC = () => {
   const [notesParCategorie, setNotesParCategorie] = useState<Record<number, Note[]>>({});
 
   const [isLoading, setIsLoading] = useState(true);
-
-  // Rôle de l'utilisateur connecté
-  const roleUtilisateurConnecte = localStorage.getItem('user_role');
-  const estSuperAdmin           = roleUtilisateurConnecte === 'super_admin';
   const [isChargementCategories, setIsChargementCategories] = useState(false);
 
   // --- Projet sélectionné dans le select ---
@@ -1444,43 +1440,6 @@ const Keynotes: React.FC = () => {
             {/* CELLULE 8+9+10 — Boutons d'action */}
             <div className="cell-span-3">
               <div className="button-group">
-                {/* Super admin uniquement */}
-                {estSuperAdmin && (
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={handleModifier}
-                  >
-                    Modifier
-                  </button>
-                )}
-                {estSuperAdmin && (
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={handleEnregistrer}
-                  >
-                    Enregistrer
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn-cancel"
-                  disabled={!annulerEstActif}
-                  onClick={annuler}
-                >
-                  Annuler
-                </button>
-                {estSuperAdmin && (
-                  <button
-                    type="button"
-                    className="btn-delete"
-                    onClick={handleSupprimer}
-                  >
-                    Supprimer
-                  </button>
-                )}
-                {/* Visible par tous */}
                 <button
                   type="button"
                   className="btn"
@@ -1495,6 +1454,35 @@ const Keynotes: React.FC = () => {
                   onClick={exporterProjet}
                 >
                   Exporter
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleEnregistrer}
+                >
+                  Enregistrer
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleModifier}
+                >
+                  Modifier
+                </button>
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  disabled={!annulerEstActif}
+                  onClick={annuler}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="btn-delete"
+                  onClick={handleSupprimer}
+                >
+                  Supprimer
                 </button>
               </div>
             </div>
