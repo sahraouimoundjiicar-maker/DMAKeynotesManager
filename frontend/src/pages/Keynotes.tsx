@@ -359,6 +359,12 @@ const Keynotes: React.FC = () => {
   const [texteRecherche, setTexteRecherche] = useState('');
 
   // --- Notifications ---
+  // --- État de la modale d'import ---
+  const [modeImportEnCours, setModeImportEnCours] = useState<{
+    nomFichier: string;
+    resolve   : (mode: 'remplacer' | 'fusionner' | null) => void;
+  } | null>(null);
+
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error' | 'warning' | 'info';
@@ -1050,8 +1056,90 @@ const Keynotes: React.FC = () => {
     }
   }
 
-  function importerProjet() {
-    afficherNotification('Import — Veuillez sélectionner un fichier .txt Revit', 'info');
+  // Ouvre la fenêtre de sélection de fichier et lance l'import
+  async function importerProjet() {
+    if (!idProjetSelectionne) {
+      afficherNotification("Veuillez d'abord sélectionner un projet", 'warning');
+      return;
+    }
+
+    // Étape 1 — Ouvrir la fenêtre de sélection de fichier
+    const input = document.createElement('input');
+    input.type   = 'file';
+    input.accept = '.txt';
+
+    input.onchange = async (evenement) => {
+      const fichier = (evenement.target as HTMLInputElement).files?.[0];
+      if (!fichier) return;
+
+      // Étape 2 — Valider le fichier
+      if (!fichier.name.endsWith('.txt')) {
+        afficherNotification('Le fichier doit être au format .txt', 'error');
+        return;
+      }
+      if (fichier.size > 5 * 1024 * 1024) {
+        afficherNotification('Le fichier dépasse la taille maximale (5 MB)', 'error');
+        return;
+      }
+
+      // Étape 3 — Choisir le mode d'import
+      const modeChoisi = await choisirModeImport(fichier.name);
+      if (!modeChoisi) return; // Annulation
+
+      // Étape 4 — Lire et envoyer le fichier
+      try {
+        const contenuTxt = await lireFichierTexte(fichier);
+        await projetsService.importer(idProjetSelectionne, {
+          mode        : modeChoisi,
+          contenu_txt : contenuTxt,
+        });
+        afficherNotification(
+          `Import (${modeChoisi}) réussi`,
+          'success'
+        );
+        // Recharger les catégories et notes
+        await chargerCategoriesEtNotes(idProjetSelectionne);
+      } catch (erreur: any) {
+        console.error('Erreur import:', erreur);
+        const messageApi = erreur?.response?.data?.detail || "Erreur lors de l'import";
+        afficherNotification(messageApi, 'error');
+      }
+    };
+
+    input.click();
+  }
+
+  // Affiche la modale de choix du mode d'import
+  function choisirModeImport(nomFichier: string): Promise<'remplacer' | 'fusionner' | null> {
+    return new Promise((resolve) => {
+      setModeImportEnCours({ nomFichier, resolve });
+    });
+  }
+
+  // Lit un fichier .txt en détectant l'encodage UTF-16 ou UTF-8
+  function lireFichierTexte(fichier: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const buffer = e.target?.result as ArrayBuffer;
+        const bytes  = new Uint8Array(buffer);
+        if (
+          (bytes[0] === 0xFF && bytes[1] === 0xFE) ||
+          (bytes[0] === 0xFE && bytes[1] === 0xFF)
+        ) {
+          resolve(new TextDecoder('utf-16').decode(buffer));
+        } else {
+          try {
+            const texte16 = new TextDecoder('utf-16le').decode(buffer);
+            resolve(texte16.includes('	') ? texte16 : new TextDecoder('utf-8').decode(buffer));
+          } catch {
+            resolve(new TextDecoder('utf-8').decode(buffer));
+          }
+        }
+      };
+      reader.onerror = () => reject(new Error('Erreur de lecture'));
+      reader.readAsArrayBuffer(fichier);
+    });
   }
 
   // ============================================================
@@ -1418,6 +1506,84 @@ const Keynotes: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* ─── MODALE CHOIX MODE IMPORT ─── */}
+        {modeImportEnCours && (
+          <div style={{
+            position       : 'fixed',
+            top            : 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display        : 'flex',
+            alignItems     : 'center',
+            justifyContent : 'center',
+            zIndex         : 1000,
+          }}>
+            <div style={{
+              backgroundColor: '#fff',
+              borderRadius   : '12px',
+              padding        : '32px',
+              maxWidth       : '480px',
+              width          : '90%',
+              boxShadow      : '0 8px 32px rgba(0,0,0,0.2)',
+            }}>
+              <h3 style={{ margin: '0 0 8px', fontSize: '18px', color: '#333' }}>
+                Mode d'import
+              </h3>
+              <p style={{ margin: '0 0 8px', fontSize: '14px', color: '#666' }}>
+                Fichier : <strong>{modeImportEnCours.nomFichier}</strong>
+              </p>
+              <p style={{ margin: '0 0 24px', fontSize: '14px', color: '#666' }}>
+                Choisissez comment importer les données dans ce projet :
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                <div style={{ padding: '16px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+                  <strong style={{ fontSize: '14px' }}>Remplacer</strong>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>
+                    Supprime toutes les catégories et notes existantes, puis importe le fichier.
+                  </p>
+                </div>
+                <div style={{ padding: '16px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+                  <strong style={{ fontSize: '14px' }}>Fusionner</strong>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>
+                    Ajoute uniquement les catégories et notes absentes.
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={() => {
+                    modeImportEnCours.resolve(null);
+                    setModeImportEnCours(null);
+                  }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="action-button"
+                  onClick={() => {
+                    modeImportEnCours.resolve('fusionner');
+                    setModeImportEnCours(null);
+                  }}
+                >
+                  Fusionner
+                </button>
+                <button
+                  type="button"
+                  className="delete-button"
+                  onClick={() => {
+                    modeImportEnCours.resolve('remplacer');
+                    setModeImportEnCours(null);
+                  }}
+                >
+                  Remplacer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </>
