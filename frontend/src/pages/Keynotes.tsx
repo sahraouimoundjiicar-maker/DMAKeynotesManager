@@ -1099,6 +1099,14 @@ const Keynotes: React.FC = () => {
         );
         // Recharger les catégories et notes
         await chargerCategoriesEtNotes(idProjetSelectionne);
+        // Ouvrir le projet dans le tableau pour afficher les données
+        setEtatCollapse((prev) => ({
+          ...prev,
+          projetsCollapsed: {
+            ...prev.projetsCollapsed,
+            [idProjetSelectionne]: false,
+          },
+        }));
       } catch (erreur: any) {
         console.error('Erreur import:', erreur);
         const messageApi = erreur?.response?.data?.detail || "Erreur lors de l'import";
