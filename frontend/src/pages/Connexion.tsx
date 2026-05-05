@@ -415,7 +415,7 @@ const Connexion: React.FC = () => {
                     <input
                       type="text"
                       className={`form-input ${errors.nom ? 'error' : ''}`}
-                      placeholder="Dupont"
+                      placeholder="Votre nom"
                       value={nom}
                       onChange={(e) => setNom(e.target.value)}
                       disabled={isLoading}
@@ -430,7 +430,7 @@ const Connexion: React.FC = () => {
                     <input
                       type="text"
                       className={`form-input ${errors.prenom ? 'error' : ''}`}
-                      placeholder="Jean"
+                      placeholder="Votre prenom"
                       value={prenom}
                       onChange={(e) => setPrenom(e.target.value)}
                       disabled={isLoading}
