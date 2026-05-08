@@ -780,29 +780,25 @@ const Projets: React.FC = () => {
         const buffer = e.target?.result as ArrayBuffer;
         const bytes  = new Uint8Array(buffer);
 
-        // Détecter BOM UTF-16 LE (FF FE) ou UTF-16 BE (FE FF)
-        if (
-          (bytes[0] === 0xFF && bytes[1] === 0xFE) ||
-          (bytes[0] === 0xFE && bytes[1] === 0xFF)
-        ) {
-          const decoder = new TextDecoder('utf-16');
+        // BOM UTF-16 LE (FF FE) → décoder en sautant les 2 bytes du BOM
+        if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+          const decoder = new TextDecoder('utf-16le');
+          resolve(decoder.decode(buffer.slice(2)));
+        }
+        // BOM UTF-16 BE (FE FF) → décoder en sautant les 2 bytes du BOM
+        else if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+          const decoder = new TextDecoder('utf-16be');
+          resolve(decoder.decode(buffer.slice(2)));
+        }
+        // BOM UTF-8 (EF BB BF) → décoder en sautant les 3 bytes du BOM
+        else if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+          const decoder = new TextDecoder('utf-8');
+          resolve(decoder.decode(buffer.slice(3)));
+        }
+        // Pas de BOM → UTF-8 par défaut
+        else {
+          const decoder = new TextDecoder('utf-8');
           resolve(decoder.decode(buffer));
-        } else {
-          // Essayer UTF-16 sans BOM, puis UTF-8
-          try {
-            const decoder16 = new TextDecoder('utf-16le');
-            const texte16   = decoder16.decode(buffer);
-            // Valider que c'est du texte lisible (contient des tabulations)
-            if (texte16.includes('\t')) {
-              resolve(texte16);
-            } else {
-              const decoder8 = new TextDecoder('utf-8');
-              resolve(decoder8.decode(buffer));
-            }
-          } catch {
-            const decoder8 = new TextDecoder('utf-8');
-            resolve(decoder8.decode(buffer));
-          }
         }
       };
 
