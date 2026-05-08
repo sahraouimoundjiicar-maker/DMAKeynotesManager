@@ -1155,19 +1155,18 @@ const Keynotes: React.FC = () => {
   React.useEffect(() => {
     function gererTouche(e: KeyboardEvent) {
       if (e.key === 'Enter') {
-        // Enter → enregistrer si on est en mode édition ou création
         if (modeCategorie === 'edition' || modeNote === 'edition' ||
             categorieSelectionnee || idProjetSelectionne) {
           handleEnregistrer();
         }
       }
       if (e.key === 'Escape') {
-        // Echap → annuler
         annuler();
       }
     }
     window.addEventListener('keydown', gererTouche);
     return () => window.removeEventListener('keydown', gererTouche);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modeCategorie, modeNote, categorieSelectionnee, idProjetSelectionne]);
 
   // ============================================================
