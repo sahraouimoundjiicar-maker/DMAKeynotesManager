@@ -1155,10 +1155,7 @@ const Keynotes: React.FC = () => {
   React.useEffect(() => {
     function gererTouche(e: KeyboardEvent) {
       if (e.key === 'Enter') {
-        if (modeCategorie === 'edition' || modeNote === 'edition' ||
-            categorieSelectionnee || idProjetSelectionne) {
-          handleEnregistrer();
-        }
+        handleEnregistrer();
       }
       if (e.key === 'Escape') {
         annuler();
@@ -1167,7 +1164,7 @@ const Keynotes: React.FC = () => {
     window.addEventListener('keydown', gererTouche);
     return () => window.removeEventListener('keydown', gererTouche);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modeCategorie, modeNote, categorieSelectionnee, idProjetSelectionne]);
+  }, []);
 
   // ============================================================
   // SECTION 21 — RENDU PRINCIPAL (JSX)
