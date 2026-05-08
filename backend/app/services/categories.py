@@ -72,21 +72,7 @@ def creer_categorie(
                 f"Projet {id_projet} introuvable."
             )
 
-        # Étape 1.2 — Valider le format Revit du numéro de catégorie
-        """
-        Le numéro de catégorie doit respecter le format Revit :
-        - Multiples de 100 : 100, 200, 300...
-        - Avec préfixe    : D100, D200, D300...
-        - Cas fixes       : 000, 020
-        """
-        if not valider_numero_categorie(numero):
-            raise ValueError(
-                f"Le numéro de catégorie '{numero}' n'est pas valide. "
-                "Format accepté : multiple de 100 (ex: 100, 200, D200) "
-                "ou cas fixes 000 et 020."
-            )
-
-        # Étape 1.3 — Vérifier l'unicité du numéro
+        # Étape 1.2 — Vérifier l'unicité du numéro
         """
         Le numéro doit être unique dans tout le projet :
         pas de doublon ni avec les catégories ni avec
@@ -181,16 +167,8 @@ def modifier_categorie(
     connexion = creer_connexion()
 
     try:
-        # Étape 2.1 — Valider le format Revit du nouveau numéro
+        # Étape 2.1 — Vérifier l'unicité du nouveau numéro
         if nouveau_numero:
-            if not valider_numero_categorie(nouveau_numero):
-                raise ValueError(
-                    f"Le numéro de catégorie '{nouveau_numero}' n'est pas valide. "
-                    "Format accepté : multiple de 100 (ex: 100, 200, D200) "
-                    "ou cas fixes 000 et 020."
-                )
-
-            # Vérifier l'unicité du nouveau numéro
             numero_disponible = (
                 repo_categories
                 .verifier_numero_categorie_unique(

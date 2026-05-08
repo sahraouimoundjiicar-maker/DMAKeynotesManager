@@ -871,26 +871,6 @@ const Keynotes: React.FC = () => {
       return;
     }
 
-    // Valider que le numéro respecte le format Revit de la catégorie
-    const categorieNote = categories.find((c) => c.id === formNote.idCategorie);
-    if (categorieNote) {
-      const numeroValide = validerNumeroNote(
-        formNote.numero.trim(),
-        categorieNote.numero
-      );
-      if (!numeroValide) {
-        const range = calculerRangeNote(categorieNote.numero);
-        const rangeTexte = range
-          ? `${range.prefixe}${String(range.min).padStart(String(range.base + 99).length, '0')} à ${range.prefixe}${String(range.max).padStart(String(range.base + 99).length, '0')}`
-          : 'invalide';
-        afficherNotification(
-          `Numéro invalide. Pour la catégorie "${categorieNote.numero}", le range valide est : ${rangeTexte}`,
-          'error'
-        );
-        return;
-      }
-    }
-
     if (!formNote.description.trim()) {
       afficherNotification('La description de la note est obligatoire', 'error');
       return;
