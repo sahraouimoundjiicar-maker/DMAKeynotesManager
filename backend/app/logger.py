@@ -26,7 +26,7 @@ import logging
 
 
 # ─────────────────────────────────────────────────────────────
-# ÉTAPE 1 — CONSTANTES DE CONFIGURATION
+# ÉTAPE 1 — CONSTANTES DE CONFIGURATION...
 # ─────────────────────────────────────────────────────────────
 
 # Étape 1.1 — Format des messages de log
