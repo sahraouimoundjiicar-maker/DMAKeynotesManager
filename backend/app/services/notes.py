@@ -28,10 +28,6 @@ from app.repositories import notes as repo_notes
 from app.repositories import categories as repo_categories
 from app.repositories import projets as repo_projets
 from app.repositories import historique as repo_historique
-from app.utils.revit_numerotation import (
-    valider_numero_note,
-    message_range_invalide,
-)
 
 
 # Initialiser le logger pour ce module
