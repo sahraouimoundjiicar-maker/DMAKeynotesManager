@@ -1185,7 +1185,7 @@ const Keynotes: React.FC = () => {
             {/* CELLULE 6+7+8 — Recherche */}
             <div className="cell-span-3">
               <div className="search-row">
-                <span className="search-label">Rechercher par :</span>
+                <label className="cell-title">Rechercher par :</label>
                 <select
                   id="searchTypeSelect"
                   className="search-type-select"
