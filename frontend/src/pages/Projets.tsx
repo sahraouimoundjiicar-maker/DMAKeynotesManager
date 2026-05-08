@@ -795,10 +795,16 @@ const Projets: React.FC = () => {
           const decoder = new TextDecoder('utf-8');
           resolve(decoder.decode(buffer.slice(3)));
         }
-        // Pas de BOM → UTF-8 par défaut
+        // Pas de BOM → tenter UTF-8, sinon Windows-1252
         else {
-          const decoder = new TextDecoder('utf-8');
-          resolve(decoder.decode(buffer));
+          try {
+            const decoder = new TextDecoder('utf-8', { fatal: true });
+            resolve(decoder.decode(buffer));
+          } catch {
+            // UTF-8 échoue → fichier Windows-1252 (ANSI)
+            const decoder = new TextDecoder('windows-1252');
+            resolve(decoder.decode(buffer));
+          }
         }
       };
 
