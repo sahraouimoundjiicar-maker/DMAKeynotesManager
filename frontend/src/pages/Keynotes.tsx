@@ -154,26 +154,6 @@ function calculerRangeNote(numeroCategorie: string): {
 /**
  * Vérifie si un numéro de note respecte le range de sa catégorie.
  */
-function validerNumeroNote(
-  numeroNote      : string,
-  numeroCategorie : string
-): boolean {
-  const range = calculerRangeNote(numeroCategorie);
-  if (!range) return false;
-
-  const numeroBrut = numeroNote.trim().toUpperCase();
-
-  // Vérifier que le préfixe correspond
-  if (!numeroBrut.startsWith(range.prefixe)) return false;
-
-  // Extraire et valider la partie numérique
-  const partieNumerique = numeroBrut.slice(range.prefixe.length);
-  const valeur = parseInt(partieNumerique, 10);
-  if (isNaN(valeur)) return false;
-
-  return valeur >= range.min && valeur <= range.max;
-}
-
 /**
  * Génère le prochain numéro disponible pour une catégorie.
  * Retourne null si tous les numéros du range sont pris.
