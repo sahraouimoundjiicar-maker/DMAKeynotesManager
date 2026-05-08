@@ -1346,3 +1346,15 @@ h2 {
     font-weight    : 600;
 }
 
+
+/* Ligne + Nouvelle catégorie / Nouvelle note */
+.add-row td {
+    padding   : 4px 8px;
+    color     : #090ea0;
+    font-size : 12px;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.add-row:hover td {
+    background-color: #f0f2fc;
+}
